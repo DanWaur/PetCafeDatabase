@@ -199,6 +199,26 @@ public class Prog4 {
 		return inputs;
 	}
 	
+	public static String[] auditPetApplications(int petID) {
+		String query = "SELECT customerName, name, appStatus, appDate FROM (dreynaldo.adoptApplication JOIN dreynaldo.customer ON custID=custID) JOIN dreynaldo.employee ON empID=empID WHERE petID=" + petID;
+		Statement stmt = null;
+		
+		try { // replace this with code to process output
+			stmt = dbconn.createStatement();
+			stmt.execute(query);
+		
+			stmt.close();	
+		} catch (SQLException e) {
+		        System.err.println("*** SQLException:  "
+		            + "Could not fetch query results.");
+		        System.err.println("\tMessage:   " + e.getMessage());
+		        System.err.println("\tSQLState:  " + e.getSQLState());
+		        System.err.println("\tErrorCode: " + e.getErrorCode());	
+		}	
+		
+		return {""};
+	}
+	
 	public static void main(String[] args) {
 
         final String oracleURL =   // Magic lectura -> aloe access spell
