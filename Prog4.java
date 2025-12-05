@@ -6,6 +6,7 @@ import java.sql.Statement;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Scanner;
+import java.time.LocalDate;
 
 public class Prog4 {
 	
@@ -220,7 +221,7 @@ public class Prog4 {
 	}
 	
 	public static void auditCustomer(int custID) {
-		String query = "SELECT orderID, currentTier, roomNo, reservationDate FROM ((SELECT roomNo, reservationDate, currentTier,checkInStatus, checkOutStatus FROM dreynaldo.reservationBooking WHERE checkInStatus=1 OR checkOutStatus=1) \"booking\"  JOIN dreynaldo.foodBooking ON custID=custID) JOIN room ON roomID=roomID where customerID=" + customerID;
+		String query = "SELECT orderID, currentTier, roomNo, reservationDate, totalCost FROM ((SELECT roomNo, reservationDate, currentTier,checkInStatus, checkOutStatus FROM dreynaldo.reservationBooking WHERE checkInStatus=1 OR checkOutStatus=1) \"booking\"  JOIN dreynaldo.foodBooking ON custID=custID) JOIN room ON roomID=roomID where customerID=" + customerID;
 		Statement stmt = null;
 		
 		try { // replace this with code to process output
@@ -239,8 +240,9 @@ public class Prog4 {
 		return;
 	}
 	
-	public static void auditCustomer(int custID) {
-		String query = "SELECT orderID, currentTier, roomNo, reservationDate FROM ((SELECT roomNo, reservationDate, currentTier,checkInStatus, checkOutStatus FROM dreynaldo.reservationBooking WHERE checkInStatus=1 OR checkOutStatus=1) \"booking\"  JOIN dreynaldo.foodBooking ON custID=custID) JOIN room ON roomID=roomID where customerID=" + customerID;
+	public static void auditUpcomingEvents() {
+		String date = LocalDate.now().toString()
+		String query = "SELECT eventName, eventDate, eventStartTime, roomNo, eventCapacity, empID, eventID FROM dreynaldo.foodBooking  WHERE eventCapacity > (SELECT count(*) from dreynaldo.eventBooking where eventID=eventID) AND eventDate > date " + date;
 		Statement stmt = null;
 		
 		try { // replace this with code to process output
