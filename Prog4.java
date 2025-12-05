@@ -199,7 +199,7 @@ public class Prog4 {
 		return inputs;
 	}
 	
-	public static String[] auditPetApplications(int petID) {
+	public static void auditPetApplications(int petID) {
 		String query = "SELECT customerName, name, appStatus, appDate FROM (dreynaldo.adoptApplication JOIN dreynaldo.customer ON custID=custID) JOIN dreynaldo.employee ON empID=empID WHERE petID=" + petID;
 		Statement stmt = null;
 		
@@ -216,7 +216,47 @@ public class Prog4 {
 		        System.err.println("\tErrorCode: " + e.getErrorCode());	
 		}	
 		
-		return {""};
+		return;
+	}
+	
+	public static void auditCustomer(int custID) {
+		String query = "SELECT orderID, currentTier, roomNo, reservationDate FROM ((SELECT roomNo, reservationDate, currentTier,checkInStatus, checkOutStatus FROM dreynaldo.reservationBooking WHERE checkInStatus=1 OR checkOutStatus=1) \"booking\"  JOIN dreynaldo.foodBooking ON custID=custID) JOIN room ON roomID=roomID where customerID=" + customerID;
+		Statement stmt = null;
+		
+		try { // replace this with code to process output
+			stmt = dbconn.createStatement();
+			stmt.execute(query);
+		
+			stmt.close();	
+		} catch (SQLException e) {
+		        System.err.println("*** SQLException:  "
+		            + "Could not fetch query results.");
+		        System.err.println("\tMessage:   " + e.getMessage());
+		        System.err.println("\tSQLState:  " + e.getSQLState());
+		        System.err.println("\tErrorCode: " + e.getErrorCode());	
+		}	
+		
+		return;
+	}
+	
+	public static void auditCustomer(int custID) {
+		String query = "SELECT orderID, currentTier, roomNo, reservationDate FROM ((SELECT roomNo, reservationDate, currentTier,checkInStatus, checkOutStatus FROM dreynaldo.reservationBooking WHERE checkInStatus=1 OR checkOutStatus=1) \"booking\"  JOIN dreynaldo.foodBooking ON custID=custID) JOIN room ON roomID=roomID where customerID=" + customerID;
+		Statement stmt = null;
+		
+		try { // replace this with code to process output
+			stmt = dbconn.createStatement();
+			stmt.execute(query);
+		
+			stmt.close();	
+		} catch (SQLException e) {
+		        System.err.println("*** SQLException:  "
+		            + "Could not fetch query results.");
+		        System.err.println("\tMessage:   " + e.getMessage());
+		        System.err.println("\tSQLState:  " + e.getSQLState());
+		        System.err.println("\tErrorCode: " + e.getErrorCode());	
+		}	
+		
+		return;
 	}
 	
 	public static void main(String[] args) {
