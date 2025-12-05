@@ -261,6 +261,29 @@ public class Prog4 {
 		return;
 	}
 	
+	String[] recordType = {""}
+	// retrieves the health records of all pets adopted by the given customer of a specific type
+	public static void auditAllHealthRecords(int custID, String type) {
+		
+		String date = LocalDate.now().toString()
+		String query = "SELECT petID, petName, recordID, empID, recordDate, recordType, description, nextDueDate, recordStatus FROM (select custID, petID, petName appStatus FROM dreynaldo.addoptApplication WHERE appStatus=1) JOIN dreynaldo.healthRecord on petID=petID WHERE recordType=" + type + " AND custID=" + custID;
+		Statement stmt = null;
+		
+		try { // replace this with code to process output
+			stmt = dbconn.createStatement();
+			stmt.execute(query);
+		
+			stmt.close();	
+		} catch (SQLException e) {
+		        System.err.println("*** SQLException:  "
+		            + "Could not fetch query results.");
+		        System.err.println("\tMessage:   " + e.getMessage());
+		        System.err.println("\tSQLState:  " + e.getSQLState());
+		        System.err.println("\tErrorCode: " + e.getErrorCode());	
+		}	
+		
+		return;
+	}	
 	public static void main(String[] args) {
 
         final String oracleURL =   // Magic lectura -> aloe access spell
