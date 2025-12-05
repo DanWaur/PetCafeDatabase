@@ -221,7 +221,7 @@ public class Prog4 {
 	}
 	
 	public static void auditCustomer(int custID) {
-		String query = "SELECT orderID, currentTier, roomNo, reservationDate, totalCost FROM ((SELECT roomNo, reservationDate, currentTier,checkInStatus, checkOutStatus FROM dreynaldo.reservationBooking WHERE checkInStatus=1 OR checkOutStatus=1) \"booking\"  JOIN dreynaldo.foodBooking ON custID=custID) JOIN room ON roomID=roomID where customerID=" + customerID;
+		String query = "SELECT orderID, currentTier, roomNo, reservationDate, totalCost FROM ((SELECT roomNo, reservationDate, currentTier,checkInStatus, checkOutStatus FROM dreynaldo.reservationBooking WHERE checkInStatus=1 OR checkOutStatus=1) \"booking\"  JOIN dreynaldo.foodBooking ON custID=custID) JOIN room ON roomID=roomID where custID=" + Integer.toString(custID);
 		Statement stmt = null;
 		
 		try { // replace this with code to process output
@@ -241,7 +241,7 @@ public class Prog4 {
 	}
 	
 	public static void auditUpcomingEvents() {
-		String date = LocalDate.now().toString()
+		String date = LocalDate.now().toString();
 		String query = "SELECT eventName, eventDate, eventStartTime, roomNo, eventCapacity, empID, eventID FROM dreynaldo.foodBooking  WHERE eventCapacity > (SELECT count(*) from dreynaldo.eventBooking where eventID=eventID) AND eventDate > date " + date;
 		Statement stmt = null;
 		
@@ -261,12 +261,12 @@ public class Prog4 {
 		return;
 	}
 	
-	String[] recordType = {""}
+	String[] recordType = {""};
 	// retrieves the health records of all pets adopted by the given customer of a specific type
 	public static void auditAllHealthRecords(int custID, String type) {
 		
-		String date = LocalDate.now().toString()
-		String query = "SELECT petID, petName, recordID, empID, recordDate, recordType, description, nextDueDate, recordStatus FROM (select custID, petID, petName appStatus FROM dreynaldo.addoptApplication WHERE appStatus=1) JOIN dreynaldo.healthRecord on petID=petID WHERE recordType=" + type + " AND custID=" + custID;
+		String date = LocalDate.now().toString();
+		String query = "SELECT petID, petName, recordID, empID, recordDate, recordType, description, nextDueDate, recordStatus FROM (select custID, petID, petName appStatus FROM dreynaldo.addoptApplication WHERE appStatus=1) JOIN dreynaldo.healthRecord on petID=petID WHERE recordType=" + type + " AND custID=" + Integer.toString(custID);
 		Statement stmt = null;
 		
 		try { // replace this with code to process output
