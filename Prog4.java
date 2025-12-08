@@ -1,6 +1,7 @@
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Arrays;
@@ -211,15 +212,49 @@ public class Prog4 {
 		return inputs;
 	}
 	
+	private static void printResults(ResultSet res) throws SQLException{
+		ResultSetMetaData meta = res.getMetaData();
+		int columns = meta.getColumnCount();
+		
+		int count = 0;
+		while (res.next()) {
+			count++;
+			
+			System.out.println("  [RESULT "+count+"]");
+			
+			for (int i = 1; i <= columns; i++) {
+				System.out.print("    "+meta.getColumnName(i)+": ");
+				System.out.println(res.getString(i));
+			}
+			System.out.println();
+		}
+		
+		System.out.println(count+" records returned");
+	}
+	
 	public static void auditPetApplications(int petID) {
-		String query = "SELECT customerName, name, appStatus, appDate FROM (dreynaldo.adoptApplication JOIN dreynaldo.customer ON custID=custID) JOIN dreynaldo.employee ON empID=empID WHERE petID=" + petID;
+		String query = "SELECT customerName AS \"Applicant\", "
+				+ "pet.name AS \"Pet Name\", "
+				+ "appStatus AS \"Application Status\", "
+				+ "appDate AS \"Application Date\", "
+				+ "emp.name AS \"Adoption Coordinator \" "
+				+ " FROM (dreynaldo.adoptApplication adopt JOIN dreynaldo.customer cust ON adopt.custID=cust.custID) "
+				+ " JOIN dreynaldo.pet pet ON pet.petId = adopt.petId "
+				+ " JOIN dreynaldo.employee emp ON adopt.empID=emp.empID "
+				+ " WHERE adopt.petID=" + petID;
+		
+		
 		Statement stmt = null;
 		
 		try { // replace this with code to process output
 			stmt = dbconn.createStatement();
-			stmt.execute(query);
+			ResultSet result = stmt.executeQuery(query);
 		
-			stmt.close();	
+				
+			
+			printResults(result);
+			
+			stmt.close();
 		} catch (SQLException e) {
 		        System.err.println("*** SQLException:  "
 		            + "Could not fetch query results.");
@@ -788,6 +823,227 @@ public class Prog4 {
 		return true;
 	}
 	
+	private static boolean checkPetDelete(int petId) {
+		
+		// check pets dead
+		String query1 = "SELECT * FROM dreynaldo.pet"
+				+ " WHERE petId = " + petId
+				+ " AND UPPER(status) = UPPER('dead')";
+		
+		// check adoption apps which are pending
+		String query2 = "SELECT * FROM dreynaldo.adoptApplication"
+				+ " WHERE petId = " + petId
+				+ " AND appStatus = 'pending'";
+		
+		// check adoptions before follow up schedule
+		String query3 = "SELECT * FROM dreynaldo.adoption JOIN dreynaldo.adoptApplication"
+				+ " ON dreynaldo.adoption.appId = dreynaldo.adoptApplication.appId"
+				+ " WHERE petId = " + petId
+				+ " AND SYSDATE < followUpSchedule";
+
+		
+		Statement stmt = null;
+		
+		try { 
+			// CHECK QUERY 1, RETURN TRUE IF PET DEAD
+			stmt = dbconn.createStatement();
+			ResultSet result = stmt.executeQuery(query1);
+			if (!queryResponseEmpty(result)) {
+				return true;
+			}
+			
+			stmt.close();
+			
+			// CHECK QUERY 2, RETURN FALSE IF RESULT HAS RECORDS
+			stmt = dbconn.createStatement();
+			result = stmt.executeQuery(query2);
+			if (!queryResponseEmpty(result)) {
+				System.out.println("  Error: Can't delete, pet has pending adoption applications");
+				return false;
+			}
+			
+			stmt.close();
+			
+			// CHECK QUERY 3, RETURN FALSE IF RESULT HAS RECORDS
+			stmt = dbconn.createStatement();
+			result = stmt.executeQuery(query3);
+			if (!queryResponseEmpty(result)) {
+				System.out.println("  Error: Can't delete, pet hasn't done their follow up schedule");
+				return false;
+			}
+			
+			stmt.close();
+			
+		
+		} catch (SQLException e) {
+		        System.err.println("*** SQLException:  "
+		            + "Could not fetch query results.");
+		        System.err.println("\tMessage:   " + e.getMessage());
+		        System.err.println("\tSQLState:  " + e.getSQLState());
+		        System.err.println("\tErrorCode: " + e.getErrorCode());	
+		        return false;
+		}	
+		
+		return true;
+	}
+	
+	private static boolean checkOrderDelete(int orderId) {
+		
+		// check items within order, if empty it can be deleted;
+		String query1 = "SELECT * FROM dreynaldo.foodOrder join dreynaldo.orderItem"
+				+ " ON dreynaldo.foodOrder.orderId=dreynaldo.orderItem.orderId"
+				+ " WHERE dreynaldo.foodOrder.orderId = " + orderId;
+
+		
+		Statement stmt = null;
+		
+		try { 
+			// CHECK QUERY 1, RETURN FALSE IF RESULT HAS RECORDS
+			stmt = dbconn.createStatement();
+			ResultSet result = stmt.executeQuery(query1);
+			if (!queryResponseEmpty(result)) {
+				System.out.println("  Error: Can't delete, this is a valid order");
+				return false;
+			}
+			
+			stmt.close();
+
+			
+		
+		} catch (SQLException e) {
+		        System.err.println("*** SQLException:  "
+		            + "Could not fetch query results.");
+		        System.err.println("\tMessage:   " + e.getMessage());
+		        System.err.println("\tSQLState:  " + e.getSQLState());
+		        System.err.println("\tErrorCode: " + e.getErrorCode());	
+		        return false;
+		}	
+		
+		return true;
+	}
+	
+	private static boolean checkReserveDelete(int resId) {
+		
+		// check orders associated with reservation
+		String query1 = "SELECT * FROM dreynaldo.reserveBooking JOIN dreynaldo.foodOrder"
+				+ " ON dreynaldo.reserveBooking.resId = dreynaldo.foodOrder.reservationId"
+				+ " WHERE dreynaldo.reserveBooking.resId = " + resId;
+		
+		
+		// check reservations which are on or past date
+		String query2 = "SELECT * FROM dreynaldo.reserveBooking"
+				+ " WHERE resId = " + resId
+				+ " AND SYSDATE >= reserveTime"; 
+
+		
+		Statement stmt = null;
+		
+		try { 
+			// CHECK QUERY 1, RETURN FALSE IF RESULT HAS RECORDS
+			stmt = dbconn.createStatement();
+			ResultSet result = stmt.executeQuery(query1);
+			if (!queryResponseEmpty(result)) {
+				System.out.println("  Error: Can't delete, this reservation has orders");
+				return false;
+			}
+			
+			stmt.close();
+			
+			// CHECK QUERY 2, RETURN FALSE IF RESULT HAS RECORDS
+			stmt = dbconn.createStatement();
+			result = stmt.executeQuery(query2);
+			if (!queryResponseEmpty(result)) {
+				System.out.println("  Error: Can't delete, past date of reservation");
+				return false;
+			}
+			
+			stmt.close();
+
+			
+		
+		} catch (SQLException e) {
+		        System.err.println("*** SQLException:  "
+		            + "Could not fetch query results.");
+		        System.err.println("\tMessage:   " + e.getMessage());
+		        System.err.println("\tSQLState:  " + e.getSQLState());
+		        System.err.println("\tErrorCode: " + e.getErrorCode());	
+		        return false;
+		}	
+		
+		return true;
+	}
+	
+	private static boolean checkAppDelete(int appId) {
+		
+		// check apps that are past unreviewed
+		String query1 = "SELECT * FROM dreynaldo.adoptApplication"
+				+ " WHERE appId = " + appId
+				+ " AND UPPER(appStatus) <> UPPER('unreviewed')";
+
+
+		
+		Statement stmt = null;
+		
+		try { 
+			// CHECK QUERY 1, RETURN FALSE IF RESULT HAS RECORDS
+			stmt = dbconn.createStatement();
+			ResultSet result = stmt.executeQuery(query1);
+			if (!queryResponseEmpty(result)) {
+				System.out.println("  Error: Can't delete, adoption has started being reviewed");
+				return false;
+			}
+			
+			stmt.close();
+		
+		} catch (SQLException e) {
+		        System.err.println("*** SQLException:  "
+		            + "Could not fetch query results.");
+		        System.err.println("\tMessage:   " + e.getMessage());
+		        System.err.println("\tSQLState:  " + e.getSQLState());
+		        System.err.println("\tErrorCode: " + e.getErrorCode());	
+		        return false;
+		}	
+		
+		return true;
+	}
+	
+	private static boolean checkEventDelete(int eventId) {
+
+		// check events which are on or past date
+		String query1 = "SELECT * FROM dreynaldo.eventBooking JOIN dreynaldo.event "
+				+ " ON dreynaldo.eventBooking.eventID = dreynaldo.event.eventID"
+				+ " WHERE dreynaldo.event.eventId = " + eventId
+				+ " AND SYSDATE >= dreynaldo.event.eventDate"; 
+
+		
+		Statement stmt = null;
+		
+		try { 
+			// CHECK QUERY 1, RETURN FALSE IF RESULT HAS RECORDS
+			stmt = dbconn.createStatement();
+			ResultSet result = stmt.executeQuery(query1);
+			if (!queryResponseEmpty(result)) {
+				System.out.println("  Error: Can't delete, past date of event");
+				return false;
+			}
+			
+			stmt.close();
+		
+		} catch (SQLException e) {
+		        System.err.println("*** SQLException:  "
+		            + "Could not fetch query results.");
+		        System.err.println("\tMessage:   " + e.getMessage());
+		        System.err.println("\tSQLState:  " + e.getSQLState());
+		        System.err.println("\tErrorCode: " + e.getErrorCode());	
+		        return false;
+		}	
+		
+		return true;
+	}
+	
+	
+	
+	
 	private static void selectDelete(int input, Scanner scan) {
 		String tableName;
 		String pkName;
@@ -817,16 +1073,50 @@ public class Prog4 {
 				}
 				break;
 			case 2:
+				canDelete = checkPetDelete(pk);
+				
+				if (canDelete) {;
+					deleteWithPk("pet",pk,"petId");
+					deleteWithPk("adoptApplication",pk,"petId");
+					deleteWithPk("adoption",pk,"petId");
+
+				}
 				break;
 			case 3:
+				canDelete = checkOrderDelete(pk);
+				
+				if (canDelete) {;
+					deleteWithPk("foodOrder",pk,"orderId");
+					deleteWithPk("orderItem",pk,"orderId");
+
+				}
 				break;
 			case 4:
+				canDelete = checkReserveDelete(pk);
+				
+				if (canDelete) {;
+					deleteWithPk("reserveBooking",pk,"resId");
+
+				}
 				break;
 			case 5:
+				System.out.println("Health records cannot be deleted. Errors should be corrected"
+						+ " with marking the status as 'void' or 'corrected");
 				break;
 			case 6:
+				canDelete = checkAppDelete(pk);
+				
+				if (canDelete) {;
+					deleteWithPk("adoptApplication",pk,"appId");
+
+				}
 				break;
 			case 7:
+				canDelete = checkEventDelete(pk);
+				
+				if (canDelete) {;
+					deleteWithPk("eventBooking",pk,"eventId");
+				}
 				break;
 			default:
 				break;
@@ -908,23 +1198,19 @@ public class Prog4 {
 		
 		while (true) {
 			
+			// Choose option
 			do {
 				loop = false;
-				System.out.println("Please Select a Table to Modify:");
-				System.out.println("(1) Member");
-				System.out.println("(2) Pet");
-				System.out.println("(3) Food/Beverage Order");
-				System.out.println("(4) Reservation Booking");
-				System.out.println("(5) Pet Health Record");
-				System.out.println("(6) Adoption Application");
-				System.out.println("(7) Event Booking");
-				System.out.println("(8) EXIT PROGRAM");
+				System.out.println("Please Select an Option:");
+				System.out.println("(1) Modify Tables");
+				System.out.println("(2) Queries");
+				System.out.println("(3) EXIT PROGRAM");
 				
 
 				if (scan.hasNextInt()) {
 					input = scan.nextInt();
 					scan.nextLine();
-					if (input < 1 || input > 8) {
+					if (input < 1 || input > 3) {
 						System.out.println("Please enter a integer 1-8");
 						loop = true;
 					}
@@ -936,10 +1222,39 @@ public class Prog4 {
 				}
 			} while (loop);
 			
-			
-			int modifyMode = -1;
-			
-			if (input != 8) {
+			// MODIFY TABLE
+			if (input == 1) {
+				do {
+					loop = false;
+					System.out.println("Please Select a Table to Modify:");
+					System.out.println("(1) Member");
+					System.out.println("(2) Pet");
+					System.out.println("(3) Food/Beverage Order");
+					System.out.println("(4) Reservation Booking");
+					System.out.println("(5) Pet Health Record");
+					System.out.println("(6) Adoption Application");
+					System.out.println("(7) Event Booking");
+					
+
+					if (scan.hasNextInt()) {
+						input = scan.nextInt();
+						scan.nextLine();
+						if (input < 1 || input > 7) {
+							System.out.println("Please enter a integer 1-7");
+							loop = true;
+						}
+					}
+					else {
+						System.out.println("Please enter a integer 1-7");
+						scan.nextLine();
+						loop = true;
+					}
+				} while (loop);
+				
+				
+				int modifyMode = -1;
+				
+
 				do {
 					loop = false;
 					System.out.println("Would you like to Insert(1), Modify(2), or Delete(3) from a table? (enter an integer):");
@@ -958,30 +1273,77 @@ public class Prog4 {
 					}
 					
 				}while (loop);
+
+				if (modifyMode == 1) {
+					selectInsert(input, scan);
+				}
+				else if (modifyMode == 2) {
+					selectModify(input, scan);
+				}
+				else {
+					selectDelete(input, scan);
+				}
+			}
+			// QUERIES
+			else if (input == 2) {
+				do {
+					loop = false;
+					System.out.println("Please Select A Query");
+					System.out.println("(1) Pet Applications");
+					System.out.println("(2) Customer Visit History");
+					System.out.println("(3) Upcoming Events");
+					System.out.println("(4) Custom Query");
+
+
+					if (scan.hasNextInt()) {
+						input = scan.nextInt();
+						scan.nextLine();
+						if (input < 1 || input > 7) {
+							System.out.println("Please enter a integer 1-4");
+							loop = true;
+						}
+					}
+					else {
+						System.out.println("Please enter a integer 1-4");
+						scan.nextLine();
+						loop = true;
+					}
+				} while (loop);
+				
+				
+				switch (input) {
+					//QUERY 1
+					case 1:
+						System.out.print("Enter a petID: ");
+						if (scan.hasNextInt()) {
+							input = scan.nextInt();
+							scan.nextLine();
+							auditPetApplications(input);	//call query
+						}
+						else {
+							break;
+						}
+						break;
+					//QUERY 2 GOES HERE
+					case 2:
+						break;
+					//QUERY 3 GOES HERE
+					case 3:
+						break;
+					//QUERY 4 GOES HERE
+					case 4:
+						break;
+				}
+			}
+			// EXIT PROGRAM
+			else {
+				break;
 			}
 
-			if (input == 8) break;	// exit program
-			
-			
-			if (modifyMode == 1) {
-				selectInsert(input, scan);
-			}
-			else if (modifyMode == 2) {
-				selectModify(input, scan);
-			}
-			else {
-				selectDelete(input, scan);
-			}
-			
-			
 		}
 		
 		
-		
-        
-        //insertFields("pet", orderPrompts, orderTypes, null);
-        
-        
+
         scan.close();
         
 		// Close the database
