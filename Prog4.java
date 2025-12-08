@@ -40,19 +40,19 @@ public class Prog4 {
 	// For insertion on Food Order
 	private static final String[] orderPrompts = {"Order Id", "Customer Id Of Orderer", "Reservation Id", 
 			"Order Time", "Payment Status (0/1)"};
-	private static final types[] orderTypes = {types.t_int, types.t_int, types.t_int, types.t_date, types.t_int};
+	private static final types[] orderTypes = {types.t_int, types.t_int, types.t_int, types.t_time, types.t_int};
 	
 	
 	// For insertion on order item
 	private static final String[] ordItemPrompts = {"Order Item Id", "Order Id", "Menu Item Id", 
-			"Quantity", "Price"};
-	private static final types[] ordItemTypes = {types.t_int, types.t_int, types.t_int, types.t_int, types.t_float};
+			"Quantity"};
+	private static final types[] ordItemTypes = {types.t_int, types.t_int, types.t_int, types.t_int};
 	
 	
 	// For insertion on reservation
 	private static final String[] reservationPrompts = {"Reservation Id", "Customer Id", "Room Number", 
 			"Reservation Time", "Duration", "Checkin Status(0/1)", "Checkout Status(0/1)"};
-	private static final types[] reservationTypes = {types.t_int, types.t_int, types.t_int, types.t_date, types.t_float, types.t_int,
+	private static final types[] reservationTypes = {types.t_int, types.t_int, types.t_int, types.t_time, types.t_float, types.t_int,
 			types.t_int};
 	
 	
@@ -73,6 +73,10 @@ public class Prog4 {
 	private static final String[] eventPrompts = {"Booking Id", "Customer Id", "Event Id", 
 			"Booking Date", "Payment Status(0/1)", "Attendance Status(0/1)"};
 	private static final types[] eventTypes = {types.t_int, types.t_int, types.t_int, types.t_date, types.t_int, types.t_int};
+	
+	// For insertion on record change audit
+	private static final String[] auditPrompts = {"audit id", "record id", "desc"};
+	private static final types[] auditTypes = {types.t_int, types.t_int, types.t_string};
 	
 	public static int nextUniqueKey(String tableName, String pkFieldName) {
 		// Send the query to the DBMS, and get and display the results
@@ -136,7 +140,10 @@ public class Prog4 {
 						System.out.print("(String)");
 						break;
 					case t_date:
-						System.out.print("(Date YYYY-MM-DD)");
+						System.out.print("(Date: 'YYYY-MM-DD')");
+						break;
+					case t_time:
+						System.out.print("(Date + Time: 'YYYY-MM-DD HH24:MI:SS')");
 						break;
 				}
 				System.out.print("?: ");
@@ -156,6 +163,9 @@ public class Prog4 {
 						break;
 					case t_date:
 						input = "DATE '"+input+"'";
+						break;
+					case t_time:
+						input = "TIMESTAMP '"+input+"'";
 						break;
 				}
 				
@@ -194,7 +204,7 @@ public class Prog4 {
 		        System.err.println("\tMessage:   " + e.getMessage());
 		        System.err.println("\tSQLState:  " + e.getSQLState());
 		        System.err.println("\tErrorCode: " + e.getErrorCode());
-		
+		        return null;
 		}
 		
 		
@@ -301,16 +311,37 @@ public class Prog4 {
 			case t_date:
 				System.out.print("(Date YYYY-MM-DD)");
 				break;
+			case t_time:
+				System.out.print("(Date + Time: 'YYYY-MM-DD HH24:MI:SS')");
+				break;
 		}
 		System.out.print("?: ");
 		
 		String value = scan.nextLine().trim();
+		String toReturn = value;
+		toReturn.replaceAll("'", "");	// remove quotes for return value
+		
+		switch (fType) {
+			case t_int:
+				break;
+			case t_float:
+				break;
+			case t_string:
+				value = "'"+value+"'";
+				break;
+			case t_date:
+				value = "DATE '"+value+"'";
+				break;
+			case t_time:
+				value = "TIMESTAMP '"+value+"'";
+				break;
+		}
 		
 		
 		// SQL statement string, updates to corresponding table
 		Statement stmt = null;
-		String query = "UPDATE "+ tablename + " SET " + fieldName + " = '" + value + 
-				"' WHERE " + pkName + " = " + pk;
+		String query = "UPDATE "+ tablename + " SET " + fieldName + " = " + value + 
+				" WHERE " + pkName + " = " + pk;
 		try {
 			
 			// Execute insert statement
@@ -331,7 +362,7 @@ public class Prog4 {
 		
 		System.out.println("  SET field '"+fieldName+"' to '"+ value+"'");
 		
-		return value;
+		return toReturn;
 	}
 	
 	private static void selectInsert(int input, Scanner scan) {
@@ -347,6 +378,8 @@ public class Prog4 {
 			overrides = new String[customerPrompts.length];	// set override input list to primary key
 			overrides[0] = Integer.toString(pk);
 			inputs = insertFields("customer", customerPrompts, customerTypes, overrides);
+			if (inputs == null) break;
+			
 			System.out.println("  Inserted " + inputs[1] + " as member with PRIMARY KEY = " + pk);
 			break;
 		case 2:
@@ -354,6 +387,8 @@ public class Prog4 {
 			overrides = new String[petPrompts.length];
 			overrides[0] = Integer.toString(pk);
 			inputs = insertFields("pet", petPrompts, petTypes, overrides);
+			if (inputs == null) break;
+			
 			System.out.println("  Inserted " + inputs[1] + " as pet with PRIMARY KEY = " + pk);
 			break;
 		case 3:
@@ -363,6 +398,9 @@ public class Prog4 {
 			// first, user enters the order information
 			System.out.println("Please enter the information for the Order:");
 			inputs = insertFields("foodOrder", orderPrompts, orderTypes, overrides);
+			
+			if (inputs == null) break;
+			
 			System.out.println("  Inserted " + inputs[1] + " as order with PRIMARY KEY = " + pk);
 			
 			
@@ -390,6 +428,8 @@ public class Prog4 {
 			overrides = new String[reservationPrompts.length];
 			overrides[0] = Integer.toString(pk);
 			inputs = insertFields("reserveBooking", reservationPrompts, reservationTypes, overrides);
+			if (inputs == null) break;
+			
 			System.out.println("  Inserted Reservation Booking with PRIMARY KEY = " + pk);
 			break;
 		case 5:
@@ -397,6 +437,8 @@ public class Prog4 {
 			overrides = new String[recordPrompts.length];
 			overrides[0] = Integer.toString(pk);
 			inputs = insertFields("healthRecord", recordPrompts, recordTypes, overrides);
+			if (inputs == null) break;
+			
 			System.out.println("  Inserted Health Record with PRIMARY KEY = " + pk);
 			break;
 		case 6:
@@ -404,6 +446,8 @@ public class Prog4 {
 			overrides = new String[adoptPrompts.length];
 			overrides[0] = Integer.toString(pk);
 			inputs = insertFields("adoptApplication", adoptPrompts, adoptTypes, overrides);
+			if (inputs == null) break;
+			
 			System.out.println("  Inserted Adoption Application with PRIMARY KEY = " + pk);
 			break;
 		case 7:
@@ -411,6 +455,8 @@ public class Prog4 {
 			overrides = new String[eventPrompts.length];
 			overrides[0] = Integer.toString(pk);
 			inputs = insertFields("eventBooking", eventPrompts, eventTypes, overrides);
+			if (inputs == null) break;
+			
 			System.out.println("  Inserted Event Booking with PRIMARY KEY = " + pk);
 			break;
 		default:
@@ -533,7 +579,7 @@ public class Prog4 {
 			tableName = "reserveBooking";
 			pkName = "resId";
 			System.out.println("What Reservation Booking Data do you need to modify?:");
-			System.out.println("Date(1), Duration(2), Check-In Status(3), Check-Out Status(4)");
+			System.out.println("Date+Time(1), Duration(2), Check-In Status(3), Check-Out Status(4)");
 			if (scan.hasNextInt()) {
 				selectField = scan.nextInt();
 				scan.nextLine();
@@ -545,7 +591,7 @@ public class Prog4 {
 			
 			// Update entity based on choice
 			if (selectField == 1) {
-				updateEntity(tableName,pk,pkName, "reserveTime", types.t_date, scan);
+				updateEntity(tableName,pk,pkName, "reserveTime", types.t_time, scan);
 			}
 			else if (selectField == 2) {
 				updateEntity(tableName,pk,pkName, "duration", types.t_float, scan);
@@ -574,19 +620,33 @@ public class Prog4 {
 				break;
 			}
 			
+			String changed;
+			String value;
 			// Update entity based on choice
 			if (selectField == 1) {
-				updateEntity(tableName,pk,pkName, "recordType", types.t_string, scan);
+				value = updateEntity(tableName,pk,pkName, "recordType", types.t_string, scan);
+				changed = "Record Type";
 			}
 			else if (selectField == 2) {
-				updateEntity(tableName,pk,pkName, "description", types.t_string, scan);
+				value = updateEntity(tableName,pk,pkName, "description", types.t_string, scan);
+				changed = "Description";
 			}
 			else if (selectField == 3) {
-				updateEntity(tableName,pk,pkName, "nextDueDate", types.t_date, scan);
+				value = updateEntity(tableName,pk,pkName, "nextDueDate", types.t_date, scan);
+				changed = "Next Due Date";
 			}
 			else if (selectField == 4) {
-				updateEntity(tableName,pk,pkName, "recordStatus", types.t_string, scan);
+				value = updateEntity(tableName,pk,pkName, "recordStatus", types.t_string, scan);
+				changed = "Status";
 			}
+			else {
+				break;
+			}
+			
+			int auditPk = nextUniqueKey("recordAudit","auditId");	// find next primary key
+			String[] overrides = {Integer.toString(auditPk), Integer.toString(pk), "'Changed "+changed+" to \""+value+"\"'"};
+			insertFields("recordAudit", auditPrompts, auditTypes, overrides);
+			
 			break;
 		case 6:
 			// Prompt and choices
@@ -624,6 +684,152 @@ public class Prog4 {
 			break;
 		default:
 			break;
+		}
+	}
+	
+	private static void deleteWithPk(String tablename, int pk, String pkName) {
+		String query = "DELETE FROM dreynaldo."+ tablename
+				+ " WHERE " + pkName + " = " + pk;
+		
+		Statement stmt = null;
+		try {
+			// Execute delete statement
+		    stmt = dbconn.createStatement();
+		    stmt.executeQuery(query);
+		    
+		    stmt.close();
+		
+		} catch (SQLException e) {
+		
+		        System.err.println("*** SQLException:  "
+		            + "Could not fetch query results.");
+		        System.err.println("\tMessage:   " + e.getMessage());
+		        System.err.println("\tSQLState:  " + e.getSQLState());
+		        System.err.println("\tErrorCode: " + e.getErrorCode());
+		
+		}
+		
+		System.out.println("  DELETED all records with "+pkName+"="+pk+" from " + tablename);
+
+	}
+	
+	private static boolean queryResponseEmpty(ResultSet result) {
+		try {
+			if (!result.next()) {
+				return true;
+			}
+			else {
+				return false;
+			}
+		} catch (SQLException e) {
+			return false;
+		}
+	}
+	
+	private static boolean checkCustomerDelete(int custId) {
+		
+		// check reserve bookings which are not complete (customer hasn't checked 
+		String query1 = "SELECT * FROM dreynaldo.reserveBooking"
+				+ " WHERE custId = " + custId
+				+ " AND (checkinStatus = 0 OR checkoutStatus = 0)";
+		// check adoption apps which are not complete (customer hasn't checked 
+		String query2 = "SELECT * FROM dreynaldo.adoptApplication"
+				+ " WHERE custId = " + custId
+				+ " AND appStatus = 'pending'";
+		// check customer has no unpaid orders
+		String query3 = "SELECT * FROM dreynaldo.foodOrder"
+				+ " WHERE custId = " + custId
+				+ " AND paymentStatus = 0";
+
+		
+		Statement stmt = null;
+		
+		try { 
+			// CHECK QUERY 1, RETURN FALSE IF RESULT HAS RECORDS
+			stmt = dbconn.createStatement();
+			ResultSet result = stmt.executeQuery(query1);
+			if (!queryResponseEmpty(result)) {
+				System.out.println("  Error: Can't delete, customer has active reservations");
+				return false;
+			}
+			
+			stmt.close();
+			
+			// CHECK QUERY 2, RETURN FALSE IF RESULT HAS RECORDS
+			stmt = dbconn.createStatement();
+			result = stmt.executeQuery(query2);
+			if (!queryResponseEmpty(result)) {
+				System.out.println("  Error: Can't delete, customer has pending adoption appplications");
+				return false;
+			}
+			
+			stmt.close();
+			
+			// CHECK QUERY 3, RETURN FALSE IF RESULT HAS RECORDS
+			stmt = dbconn.createStatement();
+			result = stmt.executeQuery(query3);
+			if (!queryResponseEmpty(result)) {
+				System.out.println("  Error: Can't delete, customer has unpaid food orders");
+				return false;
+			}
+			
+			stmt.close();
+			
+		
+		} catch (SQLException e) {
+		        System.err.println("*** SQLException:  "
+		            + "Could not fetch query results.");
+		        System.err.println("\tMessage:   " + e.getMessage());
+		        System.err.println("\tSQLState:  " + e.getSQLState());
+		        System.err.println("\tErrorCode: " + e.getErrorCode());	
+		        return false;
+		}	
+		
+		return true;
+	}
+	
+	private static void selectDelete(int input, Scanner scan) {
+		String tableName;
+		String pkName;
+		int pk = -1;
+		int selectField = -1;
+		
+		System.out.println("Please enter the PRIMARY KEY (int) of the entity in the table");
+		if (scan.hasNextInt()) {
+			pk = scan.nextInt();
+			scan.nextLine();
+		}
+		else {
+			scan.nextLine();
+			return;
+		}
+		boolean canDelete;
+		switch (input) {
+			case 1:
+				canDelete = checkCustomerDelete(pk);
+				
+				if (canDelete) {
+					deleteWithPk("customer",pk,"custId");
+					deleteWithPk("reserveBooking",pk,"custId");
+					deleteWithPk("eventBooking",pk,"custId");
+					deleteWithPk("foodOrder",pk,"custId");
+					deleteWithPk("adoptApplication",pk,"custId");
+				}
+				break;
+			case 2:
+				break;
+			case 3:
+				break;
+			case 4:
+				break;
+			case 5:
+				break;
+			case 6:
+				break;
+			case 7:
+				break;
+			default:
+				break;
 		}
 	}
 	
@@ -754,6 +960,7 @@ public class Prog4 {
 				}while (loop);
 			}
 
+			if (input == 8) break;	// exit program
 			
 			
 			if (modifyMode == 1) {
@@ -763,12 +970,10 @@ public class Prog4 {
 				selectModify(input, scan);
 			}
 			else {
-				//selectDelete(input, scan);
+				selectDelete(input, scan);
 			}
 			
-
 			
-			if (input == 8) break;	// exit program
 		}
 		
 		
