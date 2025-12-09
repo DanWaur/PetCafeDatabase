@@ -493,7 +493,7 @@ public class Prog4 {
 	
 	public static void auditUpcomingEvents() {
 		String date = LocalDate.now().toString();
-		String query = "SELECT eventName, eventDate, eventStartTime, roomNo, eventCapacity, empID, eventID FROM dreynaldo.event \"EVNT\" WHERE eventCapacity > (SELECT count(*) from dreynaldo.eventBooking \"BKING\" where \"EVNT\".eventID=\"BKING\".eventID) AND eventDate > SYSDATE"; // saw SYSDATE in one of Daniel's queries, hope it works.
+		String query = "SELECT eventName, eventStartTime, roomNo, eventCapacity, empID, eventID FROM dreynaldo.event \"EVNT\" WHERE eventCapacity > (SELECT count(*) from dreynaldo.eventBooking \"BKING\" where \"EVNT\".eventID=\"BKING\".eventID) AND eventStartTime > SYSDATE"; // saw SYSDATE in one of Daniel's queries, hope it works.
 
 		Statement stmt = null;
 		
@@ -997,8 +997,45 @@ public class Prog4 {
 			tableName = "adoptApplication";
 			pkName = "appID";
 
-			System.out.println("Enter a new status for the application(pending/approved/rejected/withdrawn):");
-			updateEntity(tableName,pk,pkName, "appStatus", types.t_string, scan,null);
+			System.out.println("Select a new status for the application: pending(1)/approved(2)/rejected(3)/withdrawn(4):");
+			
+			if (scan.hasNextInt()) {
+				selectField = scan.nextInt();
+				scan.nextLine();
+			}
+			else {
+				scan.nextLine();
+				break;
+			}
+			
+			// Update entity based on choice
+			if (selectField == 1) {
+				updateEntity(tableName,pk,pkName, "appStatus", types.t_string, scan,"pending");
+			}
+			else if (selectField == 2) {
+				updateEntity(tableName,pk,pkName, "appStatus", types.t_string, scan,"approved");
+				
+				int nextAdopt = nextUniqueKey("adoption","adoptionID");	// find next primary key
+				String[] adoptPrompts = {"adoptid", "appId","date","follow up"};
+				types[] adoptTypes = {types.t_int,types.t_int,types.t_date,types.t_date};
+				String[] adoptOverrides = new String[4];
+				
+				adoptOverrides[0] = Integer.toString(nextAdopt);
+				adoptOverrides[1] = Integer.toString(pk);
+				adoptOverrides[2] = "DATE '"+LocalDate.now().toString()+"'";
+				
+				System.out.println("Pet has been approved for adoption, please enter the date for the follow up schedule: ");
+				
+				insertFields("adoption", adoptPrompts, adoptTypes, adoptOverrides);
+				
+			}
+			else if (selectField == 3) {
+				updateEntity(tableName,pk,pkName, "appStatus", types.t_string, scan,"rejected");
+			}
+			else if (selectField == 4) {
+				updateEntity(tableName,pk,pkName, "appStatus", types.t_string, scan,"withdrawn");
+			}
+			
 			
 			break;
 		case 7:
@@ -1460,6 +1497,34 @@ public class Prog4 {
 		return true;
 	}
 	
+	private static boolean viewAllRecords(String tablename) {
+
+		// get all records from table
+		String query = "SELECT * FROM dreynaldo."+tablename ;
+
+		
+		Statement stmt = null;
+		
+		try { 
+			// execute and print records
+			stmt = dbconn.createStatement();
+			ResultSet result = stmt.executeQuery(query);
+			
+			printResults(result);
+			stmt.close();
+		
+		} catch (SQLException e) {
+		        System.err.println("*** SQLException:  "
+		            + "Could not fetch query results.");
+		        System.err.println("\tMessage:   " + e.getMessage());
+		        System.err.println("\tSQLState:  " + e.getSQLState());
+		        System.err.println("\tErrorCode: " + e.getErrorCode());	
+		        return false;
+		}	
+		
+		return true;
+	}
+	
 	
 	
 	/* Method selectDelete(int input, Scanner scan)
@@ -1551,6 +1616,34 @@ public class Prog4 {
 				if (canDelete) {;
 					deleteWithPk("eventBooking",pk,"eventId");
 				}
+				break;
+			default:
+				break;
+		}
+	}
+	
+	private static void selectView(int input) {
+		switch (input) {
+			case 1:
+				viewAllRecords("customer");
+				break;
+			case 2:
+				viewAllRecords("pet");
+				break;
+			case 3:
+				viewAllRecords("foodOrder");
+				break;
+			case 4:
+				viewAllRecords("reserveBooking");
+				break;
+			case 5:
+				viewAllRecords("healthRecord");
+				break;
+			case 6:
+				viewAllRecords("adoptApplication");
+				break;
+			case 7:
+				viewAllRecords("eventBooking");
 				break;
 			default:
 				break;
@@ -1650,7 +1743,7 @@ public class Prog4 {
 			do {
 				loop = false;
 				System.out.println("Please Select an Option:");
-				System.out.println("(1) Modify Tables");
+				System.out.println("(1) Modify/View Tables");
 				System.out.println("(2) Queries");
 				System.out.println("(3) EXIT PROGRAM");
 				
@@ -1659,12 +1752,12 @@ public class Prog4 {
 					input = scan.nextInt();
 					scan.nextLine();
 					if (input < 1 || input > 3) {
-						System.out.println("Please enter a integer 1-8");
+						System.out.println("Please enter a integer 1-3");
 						loop = true;
 					}
 				}
 				else {
-					System.out.println("Please enter a integer 1-8");
+					System.out.println("Please enter a integer 1-3");
 					scan.nextLine();
 					loop = true;
 				}
@@ -1674,7 +1767,7 @@ public class Prog4 {
 			if (input == 1) {
 				do {
 					loop = false;
-					System.out.println("Please Select a Table to Modify:");
+					System.out.println("Please Select a Table to Modify or View:");
 					System.out.println("(1) Member");
 					System.out.println("(2) Pet");
 					System.out.println("(3) Food/Beverage Order");
@@ -1705,17 +1798,17 @@ public class Prog4 {
 
 				do {
 					loop = false;
-					System.out.println("Would you like to Insert(1), Modify(2), or Delete(3) from a table? (enter an integer):");
+					System.out.println("Would you like to Insert(1), Modify(2), Delete(3), or View(4) from a table? (enter an integer):");
 					if (scan.hasNextInt()) {
 						modifyMode = scan.nextInt();
 						scan.nextLine();
-						if (modifyMode < 1 || modifyMode > 3) {
-							System.out.println("Please enter a integer 1-3");
+						if (modifyMode < 1 || modifyMode > 4) {
+							System.out.println("Please enter a integer 1-4");
 							loop = true;
 						}
 					}
 					else {
-						System.out.println("Please enter a integer 1-3");
+						System.out.println("Please enter a integer 1-4");
 						scan.nextLine();
 						loop = true;
 					}
@@ -1728,8 +1821,11 @@ public class Prog4 {
 				else if (modifyMode == 2) {
 					selectModify(input, scan);
 				}
-				else {
+				else if (modifyMode == 3) {
 					selectDelete(input, scan);
+				}
+				else {
+					selectView(input);
 				}
 			}
 			// QUERIES
