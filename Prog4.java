@@ -532,7 +532,7 @@ public class Prog4 {
 		}
 		
 		String date = LocalDate.now().toString();
-		String query = "SELECT HR.petID, recordID, empID, recordDate, recordType, description, nextDueDate, recordStatus FROM (select custID, ADA.petID, appStatus, petName FROM dreynaldo.adoptApplication ADA JOIN dreynaldo.petApplication PEA ON ADA.petID=PEA.petID WHERE appStatus='approved' and custID=" + custID + ") AA JOIN dreynaldo.healthRecord HR on HR.petID=AA.petID WHERE HR.recordType='" + type + "'";
+		String query = "SELECT HR.petID, AA.name, recordID, empID, recordDate, recordType, description, nextDueDate, recordStatus FROM (select custID, ADA.petID, appStatus, name FROM dreynaldo.adoptApplication ADA JOIN dreynaldo.pet PEA ON ADA.petID=PEA.petID WHERE appStatus='approved' and custID=" + custID + ") AA JOIN dreynaldo.healthRecord HR on HR.petID=AA.petID WHERE HR.recordType='" + type + "'";
 		Statement stmt = null;
 		try { // replace this with code to process output
 			stmt = dbconn.createStatement();
