@@ -359,8 +359,10 @@ public class Prog4 {
 		
 		try { // replace this with code to process output
 			stmt = dbconn.createStatement();
-			stmt.execute(query);
+			ResultSet result = stmt.executeQuery(query);
 		
+			printResults(result);
+
 			stmt.close();	
 		} catch (SQLException e) {
 		        System.err.println("*** SQLException:  "
@@ -373,9 +375,21 @@ public class Prog4 {
 		return;
 	}
 	
-	String[] recordType = {""};
+	String[] recordType = {"vaccination", "checkup", "feeding schedule", "grooming", "behavioral note"};
 	// retrieves the health records of all pets adopted by the given customer of a specific type
 	public static void auditAllHealthRecords(int custID, String type) {
+		boolean a = false;
+		for (int i=0; i<recordType.length; i++) {
+			if (recordType[i] == type) {
+				a = true;
+				break;
+			}
+		}
+
+		if (!a) {
+			System.out.println("Invalid record type");
+			return;
+		}
 		
 		String date = LocalDate.now().toString();
 		String query = "SELECT petID, petName, recordID, empID, recordDate, recordType, description, nextDueDate, recordStatus FROM (select custID, petID, petName appStatus FROM dreynaldo.addoptApplication WHERE appStatus=1) JOIN dreynaldo.healthRecord on petID=petID WHERE recordType=" + type + " AND custID=" + Integer.toString(custID);
@@ -1434,9 +1448,17 @@ public class Prog4 {
 						break;
 					//QUERY 3 GOES HERE
 					case 3:
+						auditUpcomingEvents();	//call query
 						break;
-					//QUERY 4 GOES HERE
+					// QUERY 4 GOES HERE
 					case 4:
+						System.out.print("Enter a customer ID: ");
+						if (scan.hasNextInt()) {
+							input = scan.nextInt();
+							scan.nextLine();
+							String type = scan.nextLine();
+							auditAllHealthRecords(input, type);	//call query
+						}
 						break;
 				}
 			}
