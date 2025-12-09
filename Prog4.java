@@ -1,3 +1,34 @@
+/* Names: Daniel Reynaldo, Advik Bargoti, Elliott Cepin
+ * Course: CSc 460
+ * Assignment: Program 4
+ * 
+ * Prof. Lester I. McCann, James Shen, Utkarsh Upadhyay
+ * 
+ * The Goal of Program4 is to design a DBMS to manage a Pet Cafe. We practiced normalization,
+ * building our schema, and interacting with the DBMS via a jdbc interface
+ * 
+ *  This program prompts the user to insert, modify, or delete records from the database.
+ *  They also have the option of choosing from 4 separate queries to view results.
+ *  
+ *  
+ * you must run this on lectura before running this:
+ * 
+ * 		export CLASSPATH=/usr/lib/oracle/19.8/client64/lib/ojdbc8.jar:${CLASSPATH}
+ * 
+ * 
+ * This Program relies on:
+ * The Oracle database, and the tables we have created under
+ * dreynaldo.TABLENAME 
+ * 
+ * This program was made with Java 16. We tested on lectura, compiled with the unix command: 'javac Prog4.java'
+ * and ran with 'java Prog4 {username} {password}'. We granted select, insert, and delete on all tables, but
+ * in case that does not work, you can run with 'java Prog4 dreynaldo a7463'
+ * 
+ * 
+ * No known errors currently exist.
+ * 
+ */
+
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -79,6 +110,26 @@ public class Prog4 {
 	private static final String[] auditPrompts = {"audit id", "record id", "desc"};
 	private static final types[] auditTypes = {types.t_int, types.t_int, types.t_string};
 	
+	
+	
+	/* Method nextUniqueKey(String tableName, String pkFieldName)
+	 * 
+	 * Purpose: For a given tablename and name of the primary key attibute field name, this
+	 * ensures that the integer that returned is an unused primary key from the database.
+	 * This is used for automatically assigning a pk to a new record.
+	 * 
+	 * 
+	 * Pre-condition: tablename must be valid name of a table under
+	 * dreynaldo.___ and pkFieldName must be a primary key from that table.
+	 * 
+	 * Post-condition: An unused pk will be returned
+	 * 
+	 * Parameters: 	tableName -- name of table in oracle (in)
+	 * 				pkFieldName -- name of field in that table (in)
+	 * 
+	 * 
+	 * Returns: integer.
+	 */
 	public static int nextUniqueKey(String tableName, String pkFieldName) {
 		// Send the query to the DBMS, and get and display the results
         Statement stmt = null;
@@ -119,6 +170,21 @@ public class Prog4 {
         
 	}
 	
+	/* Method currentReserveTier(int resId)
+	 * 
+	 * Purpose: Given a reservation id, this returns the current tier of the 
+	 * customer who made the reservation
+	 * 
+	 * 
+	 * Pre-condition: resId must be a valid reservation id
+	 * 
+	 * Post-condition: the tier as a string will be returned
+	 * 
+	 * Parameters: 	resId -- pk of reservation (in)
+	 * 
+	 * 
+	 * Returns: String.
+	 */
 	public static String currentReserveTier(int resId) {
 		// Send the query to the DBMS, and get and display the results
         Statement stmt = null;
@@ -161,6 +227,29 @@ public class Prog4 {
         
 	}
 	
+	/* Method insertFields(String tablename, String[] fieldnames, types[] fieldtypes, String[] overrides)
+	 * 
+	 * Purpose: Based on a list of prompts, the types of those prompts, and the name of the
+	 * table, this allows attributes to be entered into an INSERTION command, which will then
+	 * add the values to the table under dreynaldo.tablename. The corresponding indices in 
+	 * override[] normally will be set to null. However, if an index in the override index is
+	 * not set to null, it will manually fill in that attribute rather than prompting the user
+	 * to type it in from the console.
+	 * 
+	 * 
+	 * Pre-condition: fieldnames, fieldtypes, and overrides must all be of the same length, corresponding to the 
+	 * number of fields in the table under dreynaldo.tablename in oracle.
+	 * 
+	 * Post-condition: the table under dreynaldo.tablename will be inserted a new record with
+	 * inputs deriving from either System.in or the override list.
+	 * 
+	 * Parameters: 	tablename -- name of table (in)
+	 * 				fieldnames -- Prompts for the user (so they know what to type) (in)
+	 * 				fieldtypes -- types of the fields, so it is formatted correctly in insertion command (in)
+	 * 				overrides -- override list, which will replace system.in if the current field index is not null (in)
+	 * 
+	 * Returns: String[] -- the inputs that were entered.
+	 */
 	public static String[] insertFields(String tablename, String[] fieldnames, types[] fieldtypes, String[] overrides) {
 		Scanner scan = new Scanner(System.in);
 		String build = "INSERT into dreynaldo."+tablename+" values (";
@@ -254,6 +343,21 @@ public class Prog4 {
 		return inputs;
 	}
 	
+	/* Method printResults(ResultSet res) throws SQLException
+	 * 
+	 * Purpose: Prints the results of a SQL query.
+	 * 
+	 * 
+	 * Pre-condition: res must have been assigned to a stmt.executeQuery()
+	 * 
+	 * Post-condition: Each record will be printed as a block with the field
+	 * names and values.
+	 * 
+	 * Parameters: 	res -- the ResultSet from the query (in/out)
+	 * 
+	 * 
+	 * Returns: none.
+	 */
 	private static void printResults(ResultSet res) throws SQLException{
 		ResultSetMetaData meta = res.getMetaData();
 		int columns = meta.getColumnCount();
@@ -274,6 +378,24 @@ public class Prog4 {
 		System.out.println(count+" records returned");
 	}
 	
+	/* Method auditPetApplications(int petID)
+	 * 
+	 * Purpose: This query shows all applications made for a certain
+	 * pet id. it prints the customer name, pet name, application status, 
+	 * application date, and supervising employee name. Results are printed
+	 * to console.
+	 * 
+	 * 
+	 * Pre-condition: petId should be a valid pet PK
+	 * 
+	 * Post-condition: Each record will be printed as a block with the field
+	 * names and values.
+	 * 
+	 * Parameters: 	petID -- PK of pet from pet table (in)
+	 * 
+	 * 
+	 * Returns: none.
+	 */
 	public static void auditPetApplications(int petID) {
 		String query = "SELECT customerName AS \"Applicant\", "
 				+ "pet.name AS \"Pet Name\", "
@@ -308,6 +430,23 @@ public class Prog4 {
 		return;
 	}
 	
+	/* Method auditCustomer(int custID) 
+	 * 
+	 * Purpose: This query shows the reservation/order history of a customer, along
+	 * with their current tier at the time, the orders made, item quantity, total
+	 * cost of order, and room number.
+	 * 
+	 * 
+	 * Pre-condition: custId should be a valid customer PK
+	 * 
+	 * Post-condition: Each record will be printed as a block with the field
+	 * names and values.
+	 * 
+	 * Parameters: 	custId -- PK of pet from customer table (in)
+	 * 
+	 * 
+	 * Returns: none.
+	 */
 	public static void auditCustomer(int custID) {
 		String query = "SELECT "
 				+ " reserveTime AS \"Reservation Time\","
@@ -413,6 +552,28 @@ public class Prog4 {
 		return;
 	}	
 	
+	/* Method updateEntity(String tablename, int pk, String pkName, String fieldName, types fType, Scanner scan, String override
+	 * 
+	 * Purpose: This updates a record from a table, setting the field to a new value.
+	 * 
+	 * 
+	 * Pre-condition: tablename should be a table under dreynaldo.tablename
+	 * 	pk is a valid pk, pkName is the name of the PK field. fieldname is the name of
+	 * the field to modify. ftype is the correlating type of the field. scan
+	 * is the System.in to capture used input. And if override is not null, it will be used
+	 * as input instead of System.in
+	 * 
+	 * Post-condition: the records' field will be changed to the input by user. their input is returned
+	 * 
+	 * Parameters: 	tablename -- PK of pet from customer table (in)
+	 * 				pk -- pk of record (in)
+	 * 				pkName -- name of PK field (in)
+	 * 				fieldName -- name of field to modify (in)
+	 * 				fType -- corresponding type of field to modify (in)
+	 * 				scan -- System.in for user input (in)
+	 * 				override -- if not null, used as override instead of scan (in)
+	 * Returns: String.
+	 */
 	private static String updateEntity(String tablename, int pk, String pkName, String fieldName, types fType, Scanner scan, String override) {
 
 		switch (fType) {
@@ -489,6 +650,23 @@ public class Prog4 {
 		return toReturn;
 	}
 	
+	
+	
+	/* Method selectInsert(int input, Scanner scan)
+	 * 
+	 * Purpose: Switches between insertion between 7 different tables, depending
+	 * on 'input'. Will prompt the user about which fields to insert into the data base.
+	 * 
+	 * 
+	 * Pre-condition: input should be an int 1-7, scan is set to System.in
+	 * 
+	 * Post-condition: The corresponding table will have a record added from the inputs
+	 * provided by the user.
+	 * 
+	 * Parameters:  input -- selects a table 1-7 to insert into (in)
+	 * 				scan -- System.in used for input (in)
+	 * Returns: void.
+	 */
 	private static void selectInsert(int input, Scanner scan) {
 		
 		
@@ -501,6 +679,8 @@ public class Prog4 {
 			pk = nextUniqueKey("customer","custId");	// find next primary key
 			overrides = new String[customerPrompts.length];	// set override input list to primary key
 			overrides[0] = Integer.toString(pk);
+			overrides[7] = "'basic'";
+			
 			inputs = insertFields("customer", customerPrompts, customerTypes, overrides);
 			if (inputs == null) break;
 			
@@ -591,7 +771,21 @@ public class Prog4 {
 		}
 	}
 	
-	
+	/* Method selectModify(int input, Scanner scan)
+	 * 
+	 * Purpose: Switches between modification between 7 different tables, depending
+	 * on 'input'. Will prompt the user about which fields to modify from the table
+	 * 
+	 * 
+	 * Pre-condition: input should be an int 1-7, scan is set to System.in
+	 * 
+	 * Post-condition: The corresponding table will have a field modified from the input
+	 * provided by the user.
+	 * 
+	 * Parameters:  input -- selects a table 1-7 to modify (in)
+	 * 				scan -- System.in used for input (in)
+	 * Returns: void.
+	 */
 	private static void selectModify(int input, Scanner scan) {
 		
 		String tableName;
@@ -837,6 +1031,21 @@ public class Prog4 {
 		}
 	}
 	
+	/* Method deleteWithPk(String tablename, int pk, String pkName)
+	 * 
+	 * Purpose: deletes a record from dreynaldo.tablename with primary key
+	 * = pk.
+	 * 
+	 * 
+	 * Pre-condition: pkName should be the name of the Primary key field, pk is 
+	 * an existing pk, and tablename exists under dreynaldo.tablename
+	 * 
+	 * Post-condition: The corresponding table will have a record deleted.
+	 * 
+	 * Parameters:  tablename -- name of table(in)
+	 * 				scan -- System.in used for input
+	 * Returns: void.
+	 */
 	private static void deleteWithPk(String tablename, int pk, String pkName) {
 		String query = "DELETE FROM dreynaldo."+ tablename
 				+ " WHERE " + pkName + " = " + pk;
@@ -863,6 +1072,19 @@ public class Prog4 {
 
 	}
 	
+	/* Method queryResponseEmpty(ResultSet result)
+	 * 
+	 * Purpose: Checks if a query result is empty, returns true or false
+	 * 
+	 * 
+	 * Pre-condition: result should come from executing a query
+	 * 
+	 * Post-condition: returns true if empty, false otherwise
+	 * 
+	 * Parameters:  tablename -- name of table(in)
+	 * 				scan -- System.in used for input
+	 * Returns: void.
+	 */
 	private static boolean queryResponseEmpty(ResultSet result) {
 		try {
 			if (!result.next()) {
@@ -876,6 +1098,20 @@ public class Prog4 {
 		}
 	}
 	
+	/* Method checkCustomerDelete(int custId)
+	 * 
+	 * Purpose: Checks the requirements that a customer
+	 * may be deleted. They must have no incomplete bookings, no pending
+	 * adoption applications, and no unpaid orders.
+	 * 
+	 * 
+	 * Pre-condition: custid should be a valid pk for customer
+	 * 
+	 * Post-condition: returns true if able to delete, false otherwise
+	 * 
+	 * Parameters:  custId -- pk of customer (in)
+	 * Returns: boolean.
+	 */
 	private static boolean checkCustomerDelete(int custId) {
 		
 		// check reserve bookings which are not complete (customer hasn't checked 
@@ -938,6 +1174,20 @@ public class Prog4 {
 		return true;
 	}
 	
+	/* Method checkPetDelete(int petId)
+	 * 
+	 * Purpose: Checks the requirements that a pet
+	 * may be deleted. They must either be dead, or not have pending
+	 * applications and have completed follow up schedules
+	 * 
+	 * 
+	 * Pre-condition: petId should be a valid pk for pet
+	 * 
+	 * Post-condition: returns true if able to delete, false otherwise
+	 * 
+	 * Parameters:  petId -- pk of pet (in)
+	 * Returns: boolean.
+	 */
 	private static boolean checkPetDelete(int petId) {
 		
 		// check pets dead
@@ -1002,6 +1252,20 @@ public class Prog4 {
 		return true;
 	}
 	
+	/* Method checkOrderDelete(int orderId)
+	 * 
+	 * Purpose: Checks the requirements that a order
+	 * may be deleted. They can only be deleted if made on accident
+	 * (empty set of items in order)
+	 * 
+	 * 
+	 * Pre-condition: orderId should be a valid pk for foodOrder
+	 * 
+	 * Post-condition: returns true if able to delete, false otherwise
+	 * 
+	 * Parameters:  orderId -- pk of order (in)
+	 * Returns: boolean.
+	 */
 	private static boolean checkOrderDelete(int orderId) {
 		
 		// check items within order, if empty it can be deleted;
@@ -1037,6 +1301,20 @@ public class Prog4 {
 		return true;
 	}
 	
+	/* Method checkReserveDelete(int resId)
+	 * 
+	 * Purpose: Checks the requirements that a reservation booking
+	 * may be deleted. They must have no food orders and must be cancelled more
+	 * than a day in advance
+	 * 
+	 * 
+	 * Pre-condition: resId should be a valid pk for reservationBooking
+	 * 
+	 * Post-condition: returns true if able to delete, false otherwise
+	 * 
+	 * Parameters:  resId -- pk of reservationBooking (in)
+	 * Returns: boolean.
+	 */
 	private static boolean checkReserveDelete(int resId) {
 		
 		// check orders associated with reservation
@@ -1088,6 +1366,19 @@ public class Prog4 {
 		return true;
 	}
 	
+	/* Method checkAppDelete(int appId)
+	 * 
+	 * Purpose: Checks the requirements that a adopt application
+	 * may be deleted. They must be unreviewed to delete
+	 * 
+	 * 
+	 * Pre-condition: appId should be a valid pk for adoptApplication
+	 * 
+	 * Post-condition: returns true if able to delete, false otherwise
+	 * 
+	 * Parameters:  appid -- pk of adoptApplication (in)
+	 * Returns: boolean.
+	 */
 	private static boolean checkAppDelete(int appId) {
 		
 		// check apps that are past unreviewed
@@ -1122,6 +1413,19 @@ public class Prog4 {
 		return true;
 	}
 	
+	/* Method checkEventDelete(int appId)
+	 * 
+	 * Purpose: Checks the requirements that a event booking
+	 * may be deleted. It must be done before the date of the event.
+	 * 
+	 * 
+	 * Pre-condition: eventId should be a valid pk for eventBooking
+	 * 
+	 * Post-condition: returns true if able to delete, false otherwise
+	 * 
+	 * Parameters:  eventId -- pk of eventBooking (in)
+	 * Returns: boolean.
+	 */
 	private static boolean checkEventDelete(int eventId) {
 
 		// check events which are on or past date
@@ -1158,7 +1462,22 @@ public class Prog4 {
 	
 	
 	
-	
+	/* Method selectDelete(int input, Scanner scan)
+	 * 
+	 * Purpose: Switches between deletion between 7 different tables, depending
+	 * on 'input'. Does a check if the corresponding record can be deleted, and then
+	 * carries forth.
+	 * 
+	 * 
+	 * Pre-condition: input should be an int 1-7, scan is set to System.in
+	 * 
+	 * Post-condition: The corresponding table will have a record deleted or an
+	 * error message will be printed if it can't be deleted.
+	 * 
+	 * Parameters:  input -- selects a table 1-7 to delete from (in)
+	 * 				scan -- System.in used for input (in)
+	 * Returns: void.
+	 */
 	private static void selectDelete(int input, Scanner scan) {
 		String tableName;
 		String pkName;
@@ -1240,7 +1559,21 @@ public class Prog4 {
 	
 	
 	
-	
+	/* Method main(String[] args)
+	 * 
+	 * Purpose: Connects to the Oracle database using {username} and {password} from args.
+	 * Then, prompts the user for input to perform modifications to the tables
+	 * or to view certain queries.
+	 * 
+	 * 
+	 * Pre-condition: args should be of length 2: {username} and {password}.
+	 * (Can use 'dreynaldo' and 'a7463' if for some reason their isn't grant to tables.
+	 * 
+	 * Post-condition: The input will end when the user enters the exit command (8)
+	 * 
+	 * Parameters:  args -- command line args: {username} {password}
+	 * Returns: void.
+	 */
 	public static void main(String[] args) {
 
         final String oracleURL =   // Magic lectura -> aloe access spell
