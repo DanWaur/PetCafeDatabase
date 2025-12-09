@@ -375,7 +375,7 @@ public class Prog4 {
 		return;
 	}
 	
-	String[] recordType = {"vaccination", "checkup", "feeding schedule", "grooming", "behavioral note"};
+	static String[] recordType = {"vaccination", "checkup", "feeding schedule", "grooming", "behavioral note"};
 	// retrieves the health records of all pets adopted by the given customer of a specific type
 	public static void auditAllHealthRecords(int custID, String type) {
 		boolean a = false;
