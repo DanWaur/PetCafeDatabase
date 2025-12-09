@@ -380,7 +380,7 @@ public class Prog4 {
 	public static void auditAllHealthRecords(int custID, String type) {
 		boolean a = false;
 		for (int i=0; i<recordType.length; i++) {
-			if (recordType[i] == type) {
+			if (recordType[i].equals(type)) {
 				a = true;
 				break;
 			}
