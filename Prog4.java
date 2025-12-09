@@ -354,7 +354,7 @@ public class Prog4 {
 	
 	public static void auditUpcomingEvents() {
 		String date = LocalDate.now().toString();
-		String query = "SELECT eventName, eventDate, eventStartTime, roomNo, eventCapacity, empID, eventID FROM dreynaldo.foodBooking  WHERE eventCapacity > (SELECT count(*) from dreynaldo.eventBooking where eventID=eventID) AND eventDate > date " + date;
+		String query = "SELECT eventName, eventDate, eventStartTime, roomNo, eventCapacity, empID, eventID FROM dreynaldo.eventBooking  WHERE eventCapacity > (SELECT count(*) from dreynaldo.eventBooking where eventID=eventID) AND eventDate > date " + date;
 		Statement stmt = null;
 		
 		try { // replace this with code to process output
@@ -392,7 +392,7 @@ public class Prog4 {
 		}
 		
 		String date = LocalDate.now().toString();
-		String query = "SELECT petID, petName, recordID, empID, recordDate, recordType, description, nextDueDate, recordStatus FROM (select custID, petID, petName appStatus FROM dreynaldo.addoptApplication WHERE appStatus=1) JOIN dreynaldo.healthRecord on petID=petID WHERE recordType=" + type + " AND custID=" + Integer.toString(custID);
+		String query = "SELECT petID, petName, recordID, empID, recordDate, recordType, description, nextDueDate, recordStatus FROM (select custID, petID, petName appStatus FROM dreynaldo.adoptApplication WHERE appStatus=1) JOIN dreynaldo.healthRecord on petID=petID WHERE recordType=" + type + " AND custID=" + Integer.toString(custID);
 		Statement stmt = null;
 		
 		try { // replace this with code to process output
