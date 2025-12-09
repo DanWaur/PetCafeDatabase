@@ -90,7 +90,7 @@ public class Prog4 {
 	
 	// For insertion on healthRecord
 	private static final String[] recordPrompts = {"Record Id", "Pet Id", "Employee Id", 
-			"Record Date", "Record Type", "Description", "Next Due Date", "Record Status"};
+			"Record Date", "Record Type{vaccination/checkup/feeding schedule/grooming/behavioral note}", "Description", "Next Due Date", "Record Status"};
 	private static final types[] recordTypes = {types.t_int, types.t_int, types.t_int, types.t_date, types.t_string, types.t_string,
 			types.t_date, types.t_string};
 		
@@ -148,7 +148,6 @@ public class Prog4 {
 
               
         } catch (SQLException e) {
-
             System.err.println("*** SQLException:  "
                 + "Could not fetch query results.");
             System.err.println("\tMessage:   " + e.getMessage());
@@ -157,15 +156,20 @@ public class Prog4 {
             return 1;
         }
         
-        int nextPrimaryKey = 0;
+      
+        int nextPrimaryKey = 0;   // Int to return
         try {
-        	answer.next();
+        	
+        	// get result
+        	answer.next();	
 			nextPrimaryKey = answer.getInt(1);
+			
 			stmt.close();
 		} catch (SQLException e) {
 			System.out.println("Error getting the next Primary Key");
 		}
         
+        // max int + 1
         return nextPrimaryKey+1;
         
 	}
@@ -205,7 +209,6 @@ public class Prog4 {
 
               
         } catch (SQLException e) {
-
             System.err.println("*** SQLException:  "
                 + "Could not fetch query results.");
             System.err.println("\tMessage:   " + e.getMessage());
@@ -214,16 +217,78 @@ public class Prog4 {
             return "";
         }
         
+        // to return
         String tier = "";
         try {
+        	
+        	// get result
         	answer.next();
 			tier = answer.getString(1);
+			
 			stmt.close();
 		} catch (SQLException e) {
 			System.out.println("Error getting the next Primary Key");
 		}
         
         return tier;
+        
+	}
+	/* Method roomFull(int roomId)
+	 * 
+	 * Purpose: Checks if a room with a given roomID is full (# people > capacity), returns
+	 * true if it is, false otherwise. Uses an SQL query
+	 * 
+	 * Pre-condition: roomId must be a valid room number in dreynaldo.room
+	 * 
+	 * Post-condition: true or false will be returned if its full or not
+	 * 
+	 * Parameters: 	roomId -- room primary key (in)
+	 * 
+	 * 
+	 * Returns: boolean.
+	 */
+	public static boolean roomFull(int roomId) {
+		// Send the query to the DBMS, and get and display the results
+        Statement stmt = null;
+
+        try {
+        	
+        	// this results in a row if number of people who have checked in but not out
+        	// is larger than the capacity
+        	String query = " Select * FROM "
+        			+ " ( SELECT count(*) AS inRoom,"
+        			+ " room.capacity FROM "
+        			+ " dreynaldo.reserveBooking res join dreynaldo.room room"
+        			+ " on room.roomNo = res.roomId "
+        			+ " where res.checkinStatus = 1"
+        			+ " AND res.checkoutStatus = 0"
+        			+ " AND res.roomId = " + roomId
+        			+ " GROUP BY room.capacity ) "
+        			+ " WHERE inRoom >= capacity";
+
+			// CHECK QUERY, RETURN FALSE IF RESULT HAS RECORDS
+			stmt = dbconn.createStatement();
+			ResultSet result = stmt.executeQuery(query);
+			if (!queryResponseEmpty(result)) {
+
+				return true;
+			}
+			
+			stmt.close();
+
+
+              
+        } catch (SQLException e) {
+            System.err.println("*** SQLException:  "
+                + "Could not fetch query results.");
+            System.err.println("\tMessage:   " + e.getMessage());
+            System.err.println("\tSQLState:  " + e.getSQLState());
+            System.err.println("\tErrorCode: " + e.getErrorCode());
+            return true;
+        }
+        
+        return false;
+
         
 	}
 	
@@ -251,14 +316,21 @@ public class Prog4 {
 	 * Returns: String[] -- the inputs that were entered.
 	 */
 	public static String[] insertFields(String tablename, String[] fieldnames, types[] fieldtypes, String[] overrides) {
+		
 		Scanner scan = new Scanner(System.in);
+		
+		// building SQL statement from input
 		String build = "INSERT into dreynaldo."+tablename+" values (";
+		
+		// return inputs
 		String[] inputs = new String[fieldnames.length];
 		
 		// For each field
 		for (int i = 0; i < fieldnames.length; i++) {
 			
+			// If override list index is null, allow user to type in input
 			if (overrides == null || overrides[i] == null) {
+				
 				// Print header for each field prompt
 				System.out.print(fieldnames[i]);
 				switch (fieldtypes[i]) {
@@ -305,18 +377,21 @@ public class Prog4 {
 				build+=input;
 				inputs[i]=input;
 			}
+			
+			// If override list index is not null, manually enter override string
 			else {
 				build+= overrides[i];	// use override string to force enter
 				inputs[i]=overrides[i];
 			}
 			
+			
 			// Add commas in between
 			if (i < fieldnames.length-1) build+= ",";
 		}
+		
 		// Final parenthesis
 		build+=")";
-		
-		//System.out.println(build);
+	
 		
 		// SQL statement string, adds to corresponding table
 		Statement stmt = null;
@@ -340,6 +415,7 @@ public class Prog4 {
 		}
 		
 		
+		// return the inputs as a list
 		return inputs;
 	}
 	
@@ -359,22 +435,28 @@ public class Prog4 {
 	 * Returns: none.
 	 */
 	private static void printResults(ResultSet res) throws SQLException{
+		// Get columns and meta data
 		ResultSetMetaData meta = res.getMetaData();
 		int columns = meta.getColumnCount();
 		
-		int count = 0;
+		int count = 0;	// count records
+		
+		// Print each record as a block
 		while (res.next()) {
 			count++;
 			
 			System.out.println("  [RESULT "+count+"]");
 			
+			// print all fields
 			for (int i = 1; i <= columns; i++) {
 				System.out.print("    "+meta.getColumnName(i)+": ");
 				System.out.println(res.getString(i));
 			}
+			
 			System.out.println();
 		}
 		
+		// Show count of how many records were printed
 		System.out.println(count+" records returned");
 	}
 	
@@ -397,6 +479,8 @@ public class Prog4 {
 	 * Returns: none.
 	 */
 	public static void auditPetApplications(int petID) {
+		
+		// Get data from pet applications for this pet
 		String query = "SELECT customerName AS \"Applicant\", "
 				+ "pet.name AS \"Pet Name\", "
 				+ "appStatus AS \"Application Status\", "
@@ -410,12 +494,12 @@ public class Prog4 {
 		
 		Statement stmt = null;
 		
-		try { // replace this with code to process output
+		try { 
+			// executes the statement
 			stmt = dbconn.createStatement();
 			ResultSet result = stmt.executeQuery(query);
 		
-				
-			
+			// display
 			printResults(result);
 			
 			stmt.close();
@@ -427,7 +511,6 @@ public class Prog4 {
 		        System.err.println("\tErrorCode: " + e.getErrorCode());	
 		}	
 		
-		return;
 	}
 	
 	/* Method auditCustomer(int custID) 
@@ -448,12 +531,16 @@ public class Prog4 {
 	 * Returns: none.
 	 */
 	public static void auditCustomer(int custID) {
+		
+		// Show customer history
 		String query = "SELECT "
+				+ " res.resId AS \"Reservation ID\","
 				+ " reserveTime AS \"Reservation Time\","
 				+ " roomId AS \"Room Number\","
 				+ " ord.orderId AS \"Meal Order #\","
 				+ " SUM(orditem.qty) AS \"Qty Items Ordered\","
-				+ " SUM(orditem.qty*menu.price) AS \"Total Price\", "
+				+ " NVL(SUM(orditem.qty*menu.price), 0) AS \"Total Price\", "
+				+ " NVL(SUM(orditem.qty*menu.price*tier.discountMultiplier), 0) AS \"Discounted Total Price\", "
 				+ " currentTier AS \"Tier At Time\" "
 				
 				+ " FROM dreynaldo.reserveBooking res LEFT JOIN dreynaldo.foodOrder ord"
@@ -463,20 +550,27 @@ public class Prog4 {
 				+ " ON orditem.orderID = ord.orderId"
 				
 				+ " LEFT JOIN dreynaldo.menu menu ON orditem.menuItemId = menu.menuItemId"
+				
+				+ " LEFT JOIN dreynaldo.membershipTier tier ON tier.tier = res.currentTier"
+				
 				+ " WHERE res.custId = "+custID
-				+ " AND res.checkinStatus = 1"
+				+ " AND res.checkinStatus = 1 "
 				 + " GROUP BY "
+				 + " res.resId,"
 				 + " res.reserveTime, "
 				 + " res.roomId,"
 				 + " ord.orderId,"
-				 + " res.currentTier" ;
+				 + " res.currentTier" 
+				+ " ORDER BY res.reserveTime" ;
 		
 		Statement stmt = null;
 		
-		try { // replace this with code to process output
+		try { 
+			// execute statement
 			stmt = dbconn.createStatement();
 			ResultSet result = stmt.executeQuery(query);
 		
+			// display
 			printResults(result);
 			
 			stmt.close();
@@ -488,16 +582,34 @@ public class Prog4 {
 		        System.err.println("\tErrorCode: " + e.getErrorCode());	
 		}	
 		
-		return;
 	}
 	
+	/* Method auditUpcomingEvents()
+	 * 
+	 * Purpose: This query shows the upcoming events in future with the information about the event
+	 * including the time, room, event capacity, employee manager.
+	 * 
+	 * Pre-condition: table dreynaldo.event should be set up properly
+	 * 
+	 * Post-condition: Each record will be printed as a block with the field
+	 * names and values.
+	 * 
+	 * Parameters: 	none
+	 * 
+	 * 
+	 * Returns: none.
+	 */
 	public static void auditUpcomingEvents() {
-		String date = LocalDate.now().toString();
-		String query = "SELECT eventName, eventStartTime, roomNo, eventCapacity, empID, eventID FROM dreynaldo.event \"EVNT\" WHERE eventCapacity > (SELECT count(*) from dreynaldo.eventBooking \"BKING\" where \"EVNT\".eventID=\"BKING\".eventID) AND eventStartTime > SYSDATE"; // saw SYSDATE in one of Daniel's queries, hope it works.
+		
+		// Get upcoming events
+		String query = " SELECT eventName, eventStartTime, roomNo, eventCapacity, empID, eventID "
+				+ " FROM dreynaldo.event \"EVNT\" "
+				+ " WHERE eventCapacity > (SELECT count(*) from dreynaldo.eventBooking \"BKING\" "
+				+ " where \"EVNT\".eventID=\"BKING\".eventID) AND eventStartTime > SYSDATE";
 
 		Statement stmt = null;
 		
-		try { // replace this with code to process output
+		try { // excute
 			stmt = dbconn.createStatement();
 			ResultSet result = stmt.executeQuery(query);
 		
@@ -515,9 +627,34 @@ public class Prog4 {
 		return;
 	}
 	
-	static String[] recordType = {"vaccination", "checkup", "feeding schedule", "grooming", "behavioral note"};
-	// retrieves the health records of all pets adopted by the given customer of a specific type
+	
+	
+	
+	private static String[] recordType = {"vaccination", "checkup", "feeding schedule", "grooming", "behavioral note", "ALL"}; // used as list of possible search tools
+	
+	
+	/* Method auditAllHealthRecords(int custID, String type)
+	 * 
+	 * Purpose: This query shows all health records belonging to pets that a customer has adopted. It is filtered by a
+	 * record type that the user can choose. they can select 'ALL' to show all health records belonging to all pets they
+	 * have adopted.
+	 * 
+	 * Pre-condition: custId should be a valid customer, type is the recordType from healthRecord, unless it is 'ALL',
+	 * which will then choose to select all health records.
+	 * 
+	 * Post-condition: Each record will be printed as a block with the field
+	 * names and values.
+	 * 
+	 * Parameters: 	none
+	 * 
+	 * 
+	 * Returns: none.
+	 */
 	public static void auditAllHealthRecords(int custID, String type) {
+
+		boolean showAll = type.equals("ALL");	// true if type is equal to ALL
+		
+		// check if type is in the recordType list
 		boolean a = false;
 		for (int i=0; i<recordType.length; i++) {
 			if (recordType[i].equals(type)) {
@@ -526,18 +663,31 @@ public class Prog4 {
 			}
 		}
 
+		// type is not in static list
 		if (!a) {
 			System.out.println("Invalid record type");
 			return;
 		}
 		
-		String date = LocalDate.now().toString();
-		String query = "SELECT HR.petID, AA.name, recordID, empID, recordDate, recordType, description, nextDueDate, recordStatus FROM (select custID, ADA.petID, appStatus, name FROM dreynaldo.adoptApplication ADA JOIN dreynaldo.pet PEA ON ADA.petID=PEA.petID WHERE appStatus='approved' and custID=" + custID + ") AA JOIN dreynaldo.healthRecord HR on HR.petID=AA.petID WHERE HR.recordType='" + type + "'";
+		// choose all records from pets adopted from customer
+		String query = "SELECT HR.petID, AA.name, recordID, empID, recordDate, recordType, description, nextDueDate, recordStatus "
+				+ " FROM (select custID, ADA.petID, appStatus, name "
+				+ " FROM dreynaldo.adoptApplication ADA JOIN dreynaldo.pet PEA ON ADA.petID=PEA.petID "
+				+ " WHERE appStatus='approved' and custID=" + custID + ") AA "
+				+ " JOIN dreynaldo.healthRecord HR on HR.petID=AA.petID ";
+				
+		
+		// add condition if recordtype != [ALL] to filter by recordType
+		if (!showAll) query += " WHERE HR.recordType='" + type + "'";
+		
+		
+		
 		Statement stmt = null;
-		try { // replace this with code to process output
+		try { // do query
 			stmt = dbconn.createStatement();
 			ResultSet result = stmt.executeQuery(query);
 		
+			// display
 			printResults(result);
 
 			stmt.close();	
@@ -549,7 +699,6 @@ public class Prog4 {
 		        System.err.println("\tErrorCode: " + e.getErrorCode());	
 		}	
 		
-		return;
 	}	
 	
 	/* Method updateEntity(String tablename, int pk, String pkName, String fieldName, types fType, Scanner scan, String override
@@ -575,37 +724,47 @@ public class Prog4 {
 	 * Returns: String.
 	 */
 	private static String updateEntity(String tablename, int pk, String pkName, String fieldName, types fType, Scanner scan, String override) {
-
-		switch (fType) {
-			case t_int:
-				System.out.print("(Integer)");
-				break;
-			case t_float:
-				System.out.print("(Decimal)");
-				break;
-			case t_string:
-				System.out.print("(String)");
-				break;
-			case t_date:
-				System.out.print("(Date YYYY-MM-DD)");
-				break;
-			case t_time:
-				System.out.print("(Date + Time: 'YYYY-MM-DD HH24:MI:SS')");
-				break;
-		}
-		System.out.print("?: ");
-		
 		String value;
+
+		
+		
+		// if override is null, get user input
 		if (override == null) {
+			
+			// Show prompt based on type
+			switch (fType) {
+				case t_int:
+					System.out.print("(Integer)");
+					break;
+				case t_float:
+					System.out.print("(Decimal)");
+					break;
+				case t_string:
+					System.out.print("(String)");
+					break;
+				case t_date:
+					System.out.print("(Date YYYY-MM-DD)");
+					break;
+				case t_time:
+					System.out.print("(Date + Time: 'YYYY-MM-DD HH24:MI:SS')");
+					break;
+			}
+			System.out.print("?: ");
+			
 			value = scan.nextLine().trim();
 		}
+		
+		// override is not null, set input to override
 		else {
 			value = override;
 		}
 		
-		String toReturn = value;
+		
+		// remove quotes from return
+		String toReturn = value;	
 		toReturn.replaceAll("'", "");	// remove quotes for return value
 		
+		// Format based on type
 		switch (fType) {
 			case t_int:
 				break;
@@ -645,6 +804,7 @@ public class Prog4 {
 		
 		}
 		
+		// Shows response message
 		System.out.println("  SET field '"+fieldName+"' to '"+ value+"'");
 		
 		return toReturn;
@@ -670,105 +830,159 @@ public class Prog4 {
 	private static void selectInsert(int input, Scanner scan) {
 		
 		
-		String[] overrides;
-		String[] inputs;
-		int pk;
+		String[] overrides;	// manual overrides for insertion command
+		String[] inputs;	// results from insertion command
+		int pk;				// the newly added primary key
 		
 		switch (input) {
-		case 1:
-			pk = nextUniqueKey("customer","custId");	// find next primary key
-			overrides = new String[customerPrompts.length];	// set override input list to primary key
-			overrides[0] = Integer.toString(pk);
-			overrides[7] = "'basic'";
-			
-			inputs = insertFields("customer", customerPrompts, customerTypes, overrides);
-			if (inputs == null) break;
-			
-			System.out.println("  Inserted " + inputs[1] + " as member with PRIMARY KEY = " + pk);
-			break;
-		case 2:
-			pk = nextUniqueKey("pet","petID");	// find next primary key
-			overrides = new String[petPrompts.length];
-			overrides[0] = Integer.toString(pk);
-			inputs = insertFields("pet", petPrompts, petTypes, overrides);
-			if (inputs == null) break;
-			
-			System.out.println("  Inserted " + inputs[1] + " as pet with PRIMARY KEY = " + pk);
-			break;
-		case 3:
-			pk = nextUniqueKey("foodOrder","orderId");	// find next primary key
-			overrides = new String[orderPrompts.length];
-			overrides[0] = Integer.toString(pk);
-			// first, user enters the order information
-			System.out.println("Please enter the information for the Order:");
-			inputs = insertFields("foodOrder", orderPrompts, orderTypes, overrides);
-			
-			if (inputs == null) break;
-			
-			System.out.println("  Inserted " + inputs[1] + " as order with PRIMARY KEY = " + pk);
-			
-			
-			// Then User enters the individual order items. We want the foreign key to be the same
-			// as what the user just enters, so we override the insertion command with that orderId
-			System.out.println("Please add the items that are apart of this order:");
-			overrides = new String[ordItemPrompts.length];
-			overrides[1] = inputs[0];
 		
-			while (true) {
-				pk = nextUniqueKey("orderItem","orderItemID");	// find next primary key
+			// CUSTOMER
+			case 1:
+				pk = nextUniqueKey("customer","custId");	// find next primary key
+				overrides = new String[customerPrompts.length];	// set override input list to primary key
+				
+				// Override primary key and set tier to basic
+				overrides[0] = Integer.toString(pk);
+				overrides[7] = "'basic'";
+				
+				// insert into database
+				inputs = insertFields("customer", customerPrompts, customerTypes, overrides);
+				if (inputs == null) break;
+				
+				System.out.println("  Inserted " + inputs[1] + " as member with PRIMARY KEY = " + pk);
+				break;
+				
+			// PET
+			case 2:
+				pk = nextUniqueKey("pet","petID");	// find next primary key
+				overrides = new String[petPrompts.length];
+				
+				// override primary key
 				overrides[0] = Integer.toString(pk);
 				
+				// insert into database
+				inputs = insertFields("pet", petPrompts, petTypes, overrides);
+				if (inputs == null) break;
 				
-				inputs = insertFields("orderItem", ordItemPrompts, ordItemTypes, overrides);
-				System.out.println("  Inserted Item to Order. This item is assigned PRIMARY KEY = " + pk);
-				System.out.println("Add more items? (Y/N) ");
-				String moreItems = scan.nextLine().trim();
-				if (!moreItems.equalsIgnoreCase("y")) break;
+				System.out.println("  Inserted " + inputs[1] + " as pet with PRIMARY KEY = " + pk);
+				break;
+				
+			// FOOD ORDER
+			case 3:
+				
+				pk = nextUniqueKey("foodOrder","orderId");	// find next primary key
+				overrides = new String[orderPrompts.length];
+				
+				// override primary key
+				overrides[0] = Integer.toString(pk);
+				
+				// first, user enters the order information
+				inputs = insertFields("foodOrder", orderPrompts, orderTypes, overrides);
+				if (inputs == null) break;
+				
+				System.out.println("  Inserted " + inputs[1] + " as order with PRIMARY KEY = " + pk);
+				
+				
+				// Then User enters the individual order items. We want the foreign key to be the same
+				// as what the user just enters, so we override the insertion command with that orderId
+				System.out.println("Please add the items that are apart of this order:");
+				overrides = new String[ordItemPrompts.length];
+				
+				// orderitem.custid = foodorder.custid
+				overrides[1] = inputs[0];
+			
+				while (true) {
+					pk = nextUniqueKey("orderItem","orderItemID");	// find next primary key
+					
+					// override primary key
+					overrides[0] = Integer.toString(pk);
+					
+					// insert into database
+					inputs = insertFields("orderItem", ordItemPrompts, ordItemTypes, overrides);
+					
+					// option to add more items
+					System.out.println("  Inserted Item to Order. This item is assigned PRIMARY KEY = " + pk);
+					System.out.println("Add more items? (Y/N) ");
+					String moreItems = scan.nextLine().trim();
+					if (!moreItems.equalsIgnoreCase("y")) break;
+				}
+				
+				break;
+				
+			// RESERVATION BOOKING
+			case 4:
+				pk = nextUniqueKey("reserveBooking","resId");	// find next primary key
+				overrides = new String[reservationPrompts.length];
+				
+				// override primary key and set currentTier to 'none' (currentTier will be set when customer checked in)
+				overrides[0] = Integer.toString(pk);
+				overrides[5] = "'none'";	// set tier to none (haven't checked in yet)
+				overrides[6] = "0";	// set checkin to 0 (must use modify to set checkin)
+				overrides[7] = "0";	// set checkout to 0 (must use modify to set checkin)
+				
+				// insert into database
+				inputs = insertFields("reserveBooking", reservationPrompts, reservationTypes, overrides);
+				if (inputs == null) break;
+				
+				
+				// CAPACITY CHECK
+				// If room for reservation is full, discard
+				boolean roomfull = roomFull(Integer.parseInt(inputs[2]));
+				if (roomfull) {
+					deleteWithPk("reserveBooking", pk, "resId");
+					break;
+				}
+				
+				System.out.println("  Inserted Reservation Booking with PRIMARY KEY = " + pk);
+				break;
+				
+			// HEALTH RECORD
+			case 5:
+				pk = nextUniqueKey("healthRecord","recordID");	// find next primary key
+				overrides = new String[recordPrompts.length];
+				// override primary key
+				overrides[0] = Integer.toString(pk);
+				
+				// insert into database
+				inputs = insertFields("healthRecord", recordPrompts, recordTypes, overrides);
+				if (inputs == null) break;
+				
+				System.out.println("  Inserted Health Record with PRIMARY KEY = " + pk);
+				break;
+				
+			// ADOPT APPLICATION
+			case 6:
+				pk = nextUniqueKey("adoptApplication","appID");	// find next primary key
+				overrides = new String[adoptPrompts.length];
+				
+				// override primary key and default application status to unreviewed
+				overrides[0] = Integer.toString(pk);
+				overrides[4] = "'unreviewed'";
+				
+				// insert into database
+				inputs = insertFields("adoptApplication", adoptPrompts, adoptTypes, overrides);
+				if (inputs == null) break;
+				
+				System.out.println("  Inserted Adoption Application with PRIMARY KEY = " + pk);
+				break;
+				
+			// EVENT BOOKING
+			case 7:
+				pk = nextUniqueKey("eventBooking","bookingID");	// find next primary key
+				overrides = new String[eventPrompts.length];
+				
+				// override primary key
+				overrides[0] = Integer.toString(pk);
+				
+				// insert into database
+				inputs = insertFields("eventBooking", eventPrompts, eventTypes, overrides);
+				if (inputs == null) break;
+				
+				System.out.println("  Inserted Event Booking with PRIMARY KEY = " + pk);
+				break;
+			default:
+				break;
 			}
-			
-			break;
-		case 4:
-			pk = nextUniqueKey("reserveBooking","resId");	// find next primary key
-			overrides = new String[reservationPrompts.length];
-			overrides[0] = Integer.toString(pk);
-			overrides[5] = "'none'";	// set tier to none (haven't checked in yet)
-			
-			inputs = insertFields("reserveBooking", reservationPrompts, reservationTypes, overrides);
-			if (inputs == null) break;
-			
-			System.out.println("  Inserted Reservation Booking with PRIMARY KEY = " + pk);
-			break;
-		case 5:
-			pk = nextUniqueKey("healthRecord","recordID");	// find next primary key
-			overrides = new String[recordPrompts.length];
-			overrides[0] = Integer.toString(pk);
-			inputs = insertFields("healthRecord", recordPrompts, recordTypes, overrides);
-			if (inputs == null) break;
-			
-			System.out.println("  Inserted Health Record with PRIMARY KEY = " + pk);
-			break;
-		case 6:
-			pk = nextUniqueKey("adoptApplication","appID");	// find next primary key
-			overrides = new String[adoptPrompts.length];
-			overrides[0] = Integer.toString(pk);
-			overrides[4] = "'unreviewed'";
-			inputs = insertFields("adoptApplication", adoptPrompts, adoptTypes, overrides);
-			if (inputs == null) break;
-			
-			System.out.println("  Inserted Adoption Application with PRIMARY KEY = " + pk);
-			break;
-		case 7:
-			pk = nextUniqueKey("eventBooking","bookingID");	// find next primary key
-			overrides = new String[eventPrompts.length];
-			overrides[0] = Integer.toString(pk);
-			inputs = insertFields("eventBooking", eventPrompts, eventTypes, overrides);
-			if (inputs == null) break;
-			
-			System.out.println("  Inserted Event Booking with PRIMARY KEY = " + pk);
-			break;
-		default:
-			break;
-		}
 	}
 	
 	/* Method selectModify(int input, Scanner scan)
@@ -788,11 +1002,12 @@ public class Prog4 {
 	 */
 	private static void selectModify(int input, Scanner scan) {
 		
-		String tableName;
-		String pkName;
-		int pk = -1;
-		int selectField = -1;
+		String tableName; 	// name of table preceded with 'dreynaldo.'
+		String pkName;		// name of pk field
+		int pk = -1;		// pk gained from input
+		int selectField = -1; // modificaton option
 		
+		// Prompt user to enter primary key to modify
 		System.out.println("Please enter the PRIMARY KEY (int) of the entity in the table");
 		if (scan.hasNextInt()) {
 			pk = scan.nextInt();
@@ -803,31 +1018,17 @@ public class Prog4 {
 			return;
 		}
 		
+		
 		switch (input) {
-		case 1:
-			// Prompt and choices
-			tableName = "customer";
-			pkName = "custId";
-			System.out.println("What Member Data do you need to modify?:");
-			System.out.println("Phone(1), Email(2), Tier(3)");
-			if (scan.hasNextInt()) {
-				selectField = scan.nextInt();
-				scan.nextLine();
-			}
-			else {
-				scan.nextLine();
-				break;
-			}
-			
-			// Update entity based on choice
-			if (selectField == 1) {
-				updateEntity(tableName,pk,pkName, "phone", types.t_string, scan,null);
-			}
-			else if (selectField == 2) {
-				updateEntity(tableName,pk,pkName, "email", types.t_string, scan,null);
-			}
-			else if (selectField == 3) {
-				System.out.println("Select Tier: basic(1)/plus(2)/premium(3)");
+			// CUSTOMER
+			case 1:
+				// Prompt and choices
+				tableName = "customer";
+				pkName = "custId";
+				
+				// user enters field they want to modify
+				System.out.println("What Member Data do you need to modify?:");
+				System.out.println("Phone(1), Email(2), Tier(3)");
 				if (scan.hasNextInt()) {
 					selectField = scan.nextInt();
 					scan.nextLine();
@@ -837,235 +1038,287 @@ public class Prog4 {
 					break;
 				}
 				
-				if (selectField==2) {
-					updateEntity(tableName,pk,pkName, "tier", types.t_string, scan,"plus");
+				// Update entity based on choice
+				if (selectField == 1) {
+					updateEntity(tableName,pk,pkName, "phone", types.t_string, scan,null);
+				}
+				else if (selectField == 2) {
+					updateEntity(tableName,pk,pkName, "email", types.t_string, scan,null);
 				}
 				else if (selectField == 3) {
-					updateEntity(tableName,pk,pkName, "tier", types.t_string, scan,"premium");
+					// user enters tier option
+					System.out.println("Select Tier: basic(1)/plus(2)/premium(3)");
+					if (scan.hasNextInt()) {
+						selectField = scan.nextInt();
+						scan.nextLine();
+					}
+					else {
+						scan.nextLine();
+						break;
+					}
+					
+					// update based on input
+					if (selectField==2) {
+						updateEntity(tableName,pk,pkName, "tier", types.t_string, scan,"plus");
+					}
+					else if (selectField == 3) {
+						updateEntity(tableName,pk,pkName, "tier", types.t_string, scan,"premium");
+					}
+					else {
+						updateEntity(tableName,pk,pkName, "tier", types.t_string, scan,"basic");
+					}
+					
+				}
+				break;
+				
+			// PET
+			case 2:
+				
+				// Prompt and choices
+				tableName = "pet";
+				pkName = "petId";
+				
+				// user enters field they want to modify
+				System.out.println("What Pet Data do you need to modify?:");
+				System.out.println("Age(1), Status(2), Temperment(3)");
+				if (scan.hasNextInt()) {
+					selectField = scan.nextInt();
+					scan.nextLine();
 				}
 				else {
-					updateEntity(tableName,pk,pkName, "tier", types.t_string, scan,"basic");
+					scan.nextLine();
+					break;
 				}
 				
-			}
-			break;
-		case 2:
-			// Prompt and choices
-			tableName = "pet";
-			pkName = "petId";
-			System.out.println("What Pet Data do you need to modify?:");
-			System.out.println("Age(1), Status(2), Temperment(3)");
-			if (scan.hasNextInt()) {
-				selectField = scan.nextInt();
-				scan.nextLine();
-			}
-			else {
-				scan.nextLine();
-				break;
-			}
-			
-			// Update entity based on choice
-			if (selectField == 1) {
-				updateEntity(tableName,pk,pkName, "age", types.t_int, scan,null);
-			}
-			else if (selectField == 2) {
-				updateEntity(tableName,pk,pkName, "status", types.t_string, scan,null);
-			}
-			else if (selectField == 3) {
-				updateEntity(tableName,pk,pkName, "temperment", types.t_string, scan,null);
-			}
-			break;
-		case 3:
-			// Prompt and choices
-			tableName = "foodOrder";
-			pkName = "orderId";
-			System.out.println("What Order Data do you need to modify?:");
-			System.out.println("Add Items(1), Payment Status(2)");
-			if (scan.hasNextInt()) {
-				selectField = scan.nextInt();
-				scan.nextLine();
-			}
-			else {
-				scan.nextLine();
-				break;
-			}
-			
-			// Update entity based on choice
-			if (selectField == 1) {
-				
-				// Add more items to order
-				while (true) {
-					int itemPk = nextUniqueKey("orderItem","orderItemID");	// find next primary key
-					String[] orderInputs = new String[ordItemPrompts.length];
-					orderInputs[0] = Integer.toString(itemPk);	// order item pk
-					orderInputs[1] = Integer.toString(pk);	// fk to order
-					
-					
-					insertFields("orderItem", ordItemPrompts, ordItemTypes, orderInputs);
-					System.out.println("  Inserted Item to Order. This item is assigned PRIMARY KEY = " + itemPk);
-					System.out.println("Add more items? (Y/N) ");
-					String moreItems = scan.nextLine().trim();
-					if (!moreItems.equalsIgnoreCase("y")) break;
+				// Update entity based on choice
+				if (selectField == 1) {
+					updateEntity(tableName,pk,pkName, "age", types.t_int, scan,null);
 				}
-			}
-			else if (selectField == 2) {
+				else if (selectField == 2) {
+					updateEntity(tableName,pk,pkName, "status", types.t_string, scan,null);
+				}
+				else if (selectField == 3) {
+					updateEntity(tableName,pk,pkName, "temperment", types.t_string, scan,null);
+				}
+				break;
+				
+			// FOOD ORDER
+			case 3:
+				// Prompt and choices
+				tableName = "foodOrder";
+				pkName = "orderId";
+				
+				// user enters field they want to modify
+				System.out.println("What Order Data do you need to modify?:");
+				System.out.println("Add Items(1), Payment Status(2)");
+				if (scan.hasNextInt()) {
+					selectField = scan.nextInt();
+					scan.nextLine();
+				}
+				else {
+					scan.nextLine();
+					break;
+				}
+				
+				// Update entity based on choice
+				if (selectField == 1) {
+					
+					// Add more items to order
+					while (true) {
+						int itemPk = nextUniqueKey("orderItem","orderItemID");	// find next primary key
+						String[] orderInputs = new String[ordItemPrompts.length];
+						
+						orderInputs[0] = Integer.toString(itemPk);	// order item pk
+						orderInputs[1] = Integer.toString(pk);	// fk to order
+						
+						
+						insertFields("orderItem", ordItemPrompts, ordItemTypes, orderInputs);
+						
+						// allow to continue
+						System.out.println("  Inserted Item to Order. This item is assigned PRIMARY KEY = " + itemPk);
+						System.out.println("Add more items? (Y/N) ");
+						String moreItems = scan.nextLine().trim();
+						if (!moreItems.equalsIgnoreCase("y")) break;
+					}
+				}
+				else if (selectField == 2) {
+					System.out.println("Enter a status: 0/1");
+					updateEntity(tableName,pk,pkName, "paymentStatus", types.t_int, scan,null);
+				}
+	
+				break;
+				
+			// RESERVE BOOKING
+			case 4:
+				// Prompt and choices
+				tableName = "reserveBooking";
+				pkName = "resId";
+				
+				// user enters field they want to modify
+				System.out.println("What Reservation Booking Data do you need to modify?:");
+				System.out.println("Date+Time(1), Duration(2), Check-In Status(3), Check-Out Status(4)");
+				if (scan.hasNextInt()) {
+					selectField = scan.nextInt();
+					scan.nextLine();
+				}
+				else {
+					scan.nextLine();
+					break;
+				}
+				
+				// Update entity based on choice
+				if (selectField == 1) {
+					updateEntity(tableName,pk,pkName, "reserveTime", types.t_time, scan,null);
+				}
+				else if (selectField == 2) {
+					updateEntity(tableName,pk,pkName, "duration", types.t_float, scan,null);
+				}
+				else if (selectField == 3) {
+					System.out.println("Enter a status: 0/1");
+					updateEntity(tableName,pk,pkName, "checkinStatus", types.t_int, scan,null);
+					
+					// Grab the current tier of customer, update the reservebookings current tier for customer history
+					String updateTier = currentReserveTier(pk);
+					updateEntity(tableName,pk,pkName, "currentTier", types.t_string, scan,updateTier);
+				}
+				else if (selectField == 4) {
+					System.out.println("Enter a status: 0/1");
+					updateEntity(tableName,pk,pkName, "checkoutStatus", types.t_int, scan,null);
+				}
+				break;
+				
+			// HEALTH RECORD
+			case 5:
+				// Prompt and choices
+				tableName = "healthRecord";
+				pkName = "recordID";
+				
+				// user enters field they want to modify
+				System.out.println("What Health Record Data do you need to modify?:");
+				System.out.println("Type(1), Description(2), Next Due Date(3), Status(4)");
+				if (scan.hasNextInt()) {
+					selectField = scan.nextInt();
+					scan.nextLine();
+				}
+				else {
+					scan.nextLine();
+					break;
+				}
+				
+				String changed;
+				String value;
+				
+				// Update entity based on choice
+				if (selectField == 1) {
+					value = updateEntity(tableName,pk,pkName, "recordType", types.t_string, scan,null);
+					changed = "Record Type";
+				}
+				else if (selectField == 2) {
+					value = updateEntity(tableName,pk,pkName, "description", types.t_string, scan,null);
+					changed = "Description";
+				}
+				else if (selectField == 3) {
+					value = updateEntity(tableName,pk,pkName, "nextDueDate", types.t_date, scan,null);
+					changed = "Next Due Date";
+				}
+				else if (selectField == 4) {
+					value = updateEntity(tableName,pk,pkName, "recordStatus", types.t_string, scan,null);
+					changed = "Status";
+				}
+				else {
+					break;
+				}
+				
+				// Create an entry in audit table based on status change
+				int auditPk = nextUniqueKey("recordAudit","auditId");	// find next primary key
+				String[] overrides = {Integer.toString(auditPk), Integer.toString(pk), "'Changed "+changed+" to \""+value+"\"'"};
+				insertFields("recordAudit", auditPrompts, auditTypes, overrides);
+				System.out.println("  Change has been saved to the audit table");
+				
+				break;
+				
+			// ADOPT APPLICATION
+			case 6:
+				// Prompt and choices
+				tableName = "adoptApplication";
+				pkName = "appID";
+	
+				// user enters field they want to modify
+				System.out.println("Select a new status for the application");
+				System.out.println("pending(1)/approved(2)/rejected(3)/withdrawn(4):");
+				if (scan.hasNextInt()) {
+					selectField = scan.nextInt();
+					scan.nextLine();
+				}
+				else {
+					scan.nextLine();
+					break;
+				}
+				
+				// Update entity based on choice
+				if (selectField == 1) {
+					updateEntity(tableName,pk,pkName, "appStatus", types.t_string, scan,"pending");
+				}
+				else if (selectField == 2) {
+					updateEntity(tableName,pk,pkName, "appStatus", types.t_string, scan,"approved");
+					
+					
+					// adoption approved, so add to adoption table
+					int nextAdopt = nextUniqueKey("adoption","adoptionID");	// find next primary key
+					String[] adoptPrompts = {"adoptid", "appId","date","Follow Up Date"};
+					types[] adoptTypes = {types.t_int,types.t_int,types.t_date,types.t_date};
+					String[] adoptOverrides = new String[4];
+					
+					adoptOverrides[0] = Integer.toString(nextAdopt);	// new pk
+					adoptOverrides[1] = Integer.toString(pk);			// set to application id
+					adoptOverrides[2] = "DATE '"+LocalDate.now().toString()+"'";	// current date
+					
+					// insert into table, follow up date is only field not overridden
+					System.out.println("Pet has been approved for adoption, please enter the date for the follow up schedule: ");
+					insertFields("adoption", adoptPrompts, adoptTypes, adoptOverrides);
+					
+				}
+				else if (selectField == 3) {
+					updateEntity(tableName,pk,pkName, "appStatus", types.t_string, scan,"rejected");
+				}
+				else if (selectField == 4) {
+					updateEntity(tableName,pk,pkName, "appStatus", types.t_string, scan,"withdrawn");
+				}
+				
+				
+				break;
+				
+			// EVENT BOOKING
+			case 7:
+				// Prompt and choices
+				tableName = "eventBooking";
+				pkName = "bookingID";
+				
+				// user enters field they want to modify
+				System.out.println("What Event Booking Data do you need to modify?:");
+				System.out.println("Attendance Status(1), Payment Status(2)");
+				if (scan.hasNextInt()) {
+					selectField = scan.nextInt();
+					scan.nextLine();
+				}
+				else {
+					scan.nextLine();
+					break;
+				}
+				
 				System.out.println("Enter a status: 0/1");
-				updateEntity(tableName,pk,pkName, "paymentStatus", types.t_int, scan,null);
-			}
-
-			break;
-		case 4:
-			// Prompt and choices
-			tableName = "reserveBooking";
-			pkName = "resId";
-			System.out.println("What Reservation Booking Data do you need to modify?:");
-			System.out.println("Date+Time(1), Duration(2), Check-In Status(3), Check-Out Status(4)");
-			if (scan.hasNextInt()) {
-				selectField = scan.nextInt();
-				scan.nextLine();
-			}
-			else {
-				scan.nextLine();
+				// Update entity based on choice
+				if (selectField == 1) {
+					updateEntity(tableName,pk,pkName, "attendanceStatus", types.t_int, scan,null);
+				}
+				else if (selectField == 2) {
+					updateEntity(tableName,pk,pkName, "paymentStatus", types.t_int, scan,null);
+				}
+	
+				break;
+			default:
 				break;
 			}
-			
-			// Update entity based on choice
-			if (selectField == 1) {
-				updateEntity(tableName,pk,pkName, "reserveTime", types.t_time, scan,null);
-			}
-			else if (selectField == 2) {
-				updateEntity(tableName,pk,pkName, "duration", types.t_float, scan,null);
-			}
-			else if (selectField == 3) {
-				System.out.println("Enter a status: 0/1");
-				updateEntity(tableName,pk,pkName, "checkinStatus", types.t_int, scan,null);
-				
-				// Grab the current tier of customer, update the reservebookings current tier for customer history
-				String updateTier = currentReserveTier(pk);
-				updateEntity(tableName,pk,pkName, "currentTier", types.t_string, scan,updateTier);
-			}
-			else if (selectField == 4) {
-				System.out.println("Enter a status: 0/1");
-				updateEntity(tableName,pk,pkName, "checkoutStatus", types.t_int, scan,null);
-			}
-			break;
-		case 5:
-			// Prompt and choices
-			tableName = "healthRecord";
-			pkName = "recordID";
-			System.out.println("What Health Record Data do you need to modify?:");
-			System.out.println("Type(1), Description(2), Next Due Date(3), Status(4)");
-			if (scan.hasNextInt()) {
-				selectField = scan.nextInt();
-				scan.nextLine();
-			}
-			else {
-				scan.nextLine();
-				break;
-			}
-			
-			String changed;
-			String value;
-			// Update entity based on choice
-			if (selectField == 1) {
-				value = updateEntity(tableName,pk,pkName, "recordType", types.t_string, scan,null);
-				changed = "Record Type";
-			}
-			else if (selectField == 2) {
-				value = updateEntity(tableName,pk,pkName, "description", types.t_string, scan,null);
-				changed = "Description";
-			}
-			else if (selectField == 3) {
-				value = updateEntity(tableName,pk,pkName, "nextDueDate", types.t_date, scan,null);
-				changed = "Next Due Date";
-			}
-			else if (selectField == 4) {
-				value = updateEntity(tableName,pk,pkName, "recordStatus", types.t_string, scan,null);
-				changed = "Status";
-			}
-			else {
-				break;
-			}
-			
-			int auditPk = nextUniqueKey("recordAudit","auditId");	// find next primary key
-			String[] overrides = {Integer.toString(auditPk), Integer.toString(pk), "'Changed "+changed+" to \""+value+"\"'"};
-			insertFields("recordAudit", auditPrompts, auditTypes, overrides);
-			
-			break;
-		case 6:
-			// Prompt and choices
-			tableName = "adoptApplication";
-			pkName = "appID";
-
-			System.out.println("Select a new status for the application: pending(1)/approved(2)/rejected(3)/withdrawn(4):");
-			
-			if (scan.hasNextInt()) {
-				selectField = scan.nextInt();
-				scan.nextLine();
-			}
-			else {
-				scan.nextLine();
-				break;
-			}
-			
-			// Update entity based on choice
-			if (selectField == 1) {
-				updateEntity(tableName,pk,pkName, "appStatus", types.t_string, scan,"pending");
-			}
-			else if (selectField == 2) {
-				updateEntity(tableName,pk,pkName, "appStatus", types.t_string, scan,"approved");
-				
-				int nextAdopt = nextUniqueKey("adoption","adoptionID");	// find next primary key
-				String[] adoptPrompts = {"adoptid", "appId","date","follow up"};
-				types[] adoptTypes = {types.t_int,types.t_int,types.t_date,types.t_date};
-				String[] adoptOverrides = new String[4];
-				
-				adoptOverrides[0] = Integer.toString(nextAdopt);
-				adoptOverrides[1] = Integer.toString(pk);
-				adoptOverrides[2] = "DATE '"+LocalDate.now().toString()+"'";
-				
-				System.out.println("Pet has been approved for adoption, please enter the date for the follow up schedule: ");
-				
-				insertFields("adoption", adoptPrompts, adoptTypes, adoptOverrides);
-				
-			}
-			else if (selectField == 3) {
-				updateEntity(tableName,pk,pkName, "appStatus", types.t_string, scan,"rejected");
-			}
-			else if (selectField == 4) {
-				updateEntity(tableName,pk,pkName, "appStatus", types.t_string, scan,"withdrawn");
-			}
-			
-			
-			break;
-		case 7:
-			// Prompt and choices
-			tableName = "eventBooking";
-			pkName = "bookingID";
-			System.out.println("What Event Booking Data do you need to modify?:");
-			System.out.println("Attendance Status(1), Payment Status(2)");
-			if (scan.hasNextInt()) {
-				selectField = scan.nextInt();
-				scan.nextLine();
-			}
-			else {
-				scan.nextLine();
-				break;
-			}
-			
-			System.out.println("Enter a status: 0/1");
-			// Update entity based on choice
-			if (selectField == 1) {
-				updateEntity(tableName,pk,pkName, "attendanceStatus", types.t_int, scan,null);
-			}
-			else if (selectField == 2) {
-				updateEntity(tableName,pk,pkName, "paymentStatus", types.t_int, scan,null);
-			}
-
-			break;
-		default:
-			break;
-		}
 	}
 	
 	/* Method deleteWithPk(String tablename, int pk, String pkName)
@@ -1084,6 +1337,7 @@ public class Prog4 {
 	 * Returns: void.
 	 */
 	private static void deleteWithPk(String tablename, int pk, String pkName) {
+		// Delete query using pk
 		String query = "DELETE FROM dreynaldo."+ tablename
 				+ " WHERE " + pkName + " = " + pk;
 		
@@ -1102,7 +1356,7 @@ public class Prog4 {
 		        System.err.println("\tMessage:   " + e.getMessage());
 		        System.err.println("\tSQLState:  " + e.getSQLState());
 		        System.err.println("\tErrorCode: " + e.getErrorCode());
-		
+		        return;
 		}
 		
 		System.out.println("  DELETED all records with "+pkName+"="+pk+" from " + tablename);
@@ -1124,9 +1378,12 @@ public class Prog4 {
 	 */
 	private static boolean queryResponseEmpty(ResultSet result) {
 		try {
+			// if has no result, return true
 			if (!result.next()) {
 				return true;
 			}
+			
+			// return false if has content
 			else {
 				return false;
 			}
@@ -1510,7 +1767,9 @@ public class Prog4 {
 			stmt = dbconn.createStatement();
 			ResultSet result = stmt.executeQuery(query);
 			
+			// display
 			printResults(result);
+			
 			stmt.close();
 		
 		} catch (SQLException e) {
@@ -1544,11 +1803,10 @@ public class Prog4 {
 	 * Returns: void.
 	 */
 	private static void selectDelete(int input, Scanner scan) {
-		String tableName;
-		String pkName;
-		int pk = -1;
-		int selectField = -1;
+
+		int pk = -1;	// primary key to delete
 		
+		// prompt user for PK
 		System.out.println("Please enter the PRIMARY KEY (int) of the entity in the table");
 		if (scan.hasNextInt()) {
 			pk = scan.nextInt();
@@ -1558,9 +1816,15 @@ public class Prog4 {
 			scan.nextLine();
 			return;
 		}
-		boolean canDelete;
+		
+		
+		boolean canDelete;	// set to true if user is allowed to delete based on checks
 		switch (input) {
+		
+			// CUSTOMER
 			case 1:
+				
+				// check if allowed and delete all references
 				canDelete = checkCustomerDelete(pk);
 				
 				if (canDelete) {
@@ -1571,7 +1835,10 @@ public class Prog4 {
 					deleteWithPk("adoptApplication",pk,"custId");
 				}
 				break;
+				
+			// PET
 			case 2:
+				// check if allowed and delete all references
 				canDelete = checkPetDelete(pk);
 				
 				if (canDelete) {;
@@ -1581,7 +1848,10 @@ public class Prog4 {
 
 				}
 				break;
+			
+			// FOOD ORDER
 			case 3:
+				// check if allowed and delete all references
 				canDelete = checkOrderDelete(pk);
 				
 				if (canDelete) {;
@@ -1590,7 +1860,11 @@ public class Prog4 {
 
 				}
 				break;
+				
+			// RESERVE BOOKING
 			case 4:
+				
+				// check if allowed and delete all references
 				canDelete = checkReserveDelete(pk);
 				
 				if (canDelete) {;
@@ -1598,11 +1872,17 @@ public class Prog4 {
 
 				}
 				break;
+			
+			// HEALTH RECORD
 			case 5:
 				System.out.println("Health records cannot be deleted. Errors should be corrected"
 						+ " with marking the status as 'void' or 'corrected");
 				break;
+				
+			// ADOPT APPLICATION
 			case 6:
+				
+				// check if allowed and delete all references
 				canDelete = checkAppDelete(pk);
 				
 				if (canDelete) {;
@@ -1610,7 +1890,11 @@ public class Prog4 {
 
 				}
 				break;
+				
+			// EVENT BOOKING 
 			case 7:
+				
+				// check if allowed and delete all references
 				canDelete = checkEventDelete(pk);
 				
 				if (canDelete) {;
@@ -1624,24 +1908,38 @@ public class Prog4 {
 	
 	private static void selectView(int input) {
 		switch (input) {
+		
+			// CUSTOMER
 			case 1:
 				viewAllRecords("customer");
 				break;
+				
+			// PET
 			case 2:
 				viewAllRecords("pet");
 				break;
+				
+			// FOOD ORDER
 			case 3:
 				viewAllRecords("foodOrder");
 				break;
+				
+			// RESERVE BOOKING
 			case 4:
 				viewAllRecords("reserveBooking");
 				break;
+				
+			// HEALTH RECORD
 			case 5:
 				viewAllRecords("healthRecord");
 				break;
+				
+			// ADOPT APPLICATION
 			case 6:
 				viewAllRecords("adoptApplication");
 				break;
+				
+			// EVENT BOOKING 
 			case 7:
 				viewAllRecords("eventBooking");
 				break;
@@ -1669,15 +1967,11 @@ public class Prog4 {
 	 */
 	public static void main(String[] args) {
 
-        final String oracleURL =   // Magic lectura -> aloe access spell
+        final String oracleURL =   // Connect lectura to aloe
                         "jdbc:oracle:thin:@aloe.cs.arizona.edu:1521:oracle";
-
-        final String query =       // our test query
-                        "SELECT sno, status FROM mccann.s";
 
         String username = null,    // Oracle DBMS username
                password = null;    // Oracle DBMS password
-
 
         if (args.length == 2) {    // get username/password from cmd line args
             username = args[0];
@@ -1689,14 +1983,11 @@ public class Prog4 {
                              + " password (not your system password).\n");
             System.exit(-1);
         }
-
         
-
         // load the (Oracle) JDBC driver by initializing its base
         // class, 'oracle.jdbc.OracleDriver'.
 
         try {
-
                 Class.forName("oracle.jdbc.OracleDriver");
 
         } catch (ClassNotFoundException e) {
@@ -1705,16 +1996,13 @@ public class Prog4 {
                     + "Error loading Oracle JDBC driver.  \n"
                     + "\tPerhaps the driver is not on the Classpath?");
                 System.exit(-1);
-
         }
-
-        
+   
         // make and return a database connection to the user's
         // Oracle database
         try {
                 dbconn = DriverManager.getConnection
                                (oracleURL,username,password);
-
         } catch (SQLException e) {
 
                 System.err.println("*** SQLException:  "
@@ -1723,7 +2011,6 @@ public class Prog4 {
                 System.err.println("\tSQLState:  " + e.getSQLState());
                 System.err.println("\tErrorCode: " + e.getErrorCode());
                 System.exit(-1);
-
         }
 		
         
@@ -1732,14 +2019,12 @@ public class Prog4 {
         // USER INPUT AFTER CONNECTION COMPLETED
 		Scanner scan = new Scanner(System.in);
 		
-		int input = 0;
-		boolean loop = false;
-		
-		
+		int input = 0;	// selection number
+		boolean loop = false;	// keep asking for input?
 		
 		while (true) {
 			
-			// Choose option
+			// Choose option, validate
 			do {
 				loop = false;
 				System.out.println("Please Select an Option:");
@@ -1748,14 +2033,18 @@ public class Prog4 {
 				System.out.println("(3) EXIT PROGRAM");
 				
 
+				// Get next integer and check
 				if (scan.hasNextInt()) {
 					input = scan.nextInt();
 					scan.nextLine();
+					
+					// invalid int, try again
 					if (input < 1 || input > 3) {
 						System.out.println("Please enter a integer 1-3");
 						loop = true;
 					}
 				}
+				// no int, try again
 				else {
 					System.out.println("Please enter a integer 1-3");
 					scan.nextLine();
@@ -1763,8 +2052,11 @@ public class Prog4 {
 				}
 			} while (loop);
 			
-			// MODIFY TABLE
+			
+			// OPTION: MODIFY TABLE
 			if (input == 1) {
+				
+				// choose option, validate
 				do {
 					loop = false;
 					System.out.println("Please Select a Table to Modify or View:");
@@ -1776,15 +2068,17 @@ public class Prog4 {
 					System.out.println("(6) Adoption Application");
 					System.out.println("(7) Event Booking");
 					
-
+					// Get next integer and check
 					if (scan.hasNextInt()) {
 						input = scan.nextInt();
 						scan.nextLine();
+						// invalid int, try again
 						if (input < 1 || input > 7) {
 							System.out.println("Please enter a integer 1-7");
 							loop = true;
 						}
 					}
+					// not int, try again
 					else {
 						System.out.println("Please enter a integer 1-7");
 						scan.nextLine();
@@ -1793,28 +2087,34 @@ public class Prog4 {
 				} while (loop);
 				
 				
-				int modifyMode = -1;
-				
+				int modifyMode = -1;	// select modify mode
 
+				
+				// choose option, validate
 				do {
 					loop = false;
 					System.out.println("Would you like to Insert(1), Modify(2), Delete(3), or View(4) from a table? (enter an integer):");
+					
+					// get next integer and check
 					if (scan.hasNextInt()) {
 						modifyMode = scan.nextInt();
 						scan.nextLine();
+						// invalid int, try again
 						if (modifyMode < 1 || modifyMode > 4) {
 							System.out.println("Please enter a integer 1-4");
 							loop = true;
 						}
 					}
+					// not int, try again
 					else {
 						System.out.println("Please enter a integer 1-4");
 						scan.nextLine();
 						loop = true;
 					}
-					
 				}while (loop);
-
+				
+				
+				// perform final action based on input
 				if (modifyMode == 1) {
 					selectInsert(input, scan);
 				}
@@ -1828,25 +2128,31 @@ public class Prog4 {
 					selectView(input);
 				}
 			}
-			// QUERIES
+			// OPTION: QUERIES
 			else if (input == 2) {
+				
+				// choose query, validate
 				do {
 					loop = false;
 					System.out.println("Please Select A Query");
 					System.out.println("(1) Pet Applications");
 					System.out.println("(2) Customer Visit History");
 					System.out.println("(3) Upcoming Events");
-					System.out.println("(4) Custom Query");
+					System.out.println("(4) Find Health Records of Customer's adopted Pets");
 
-
+					// next int, validate
 					if (scan.hasNextInt()) {
 						input = scan.nextInt();
 						scan.nextLine();
+						
+						// invalid int, try again
 						if (input < 1 || input > 7) {
 							System.out.println("Please enter a integer 1-4");
 							loop = true;
 						}
 					}
+					
+					// not int, try again
 					else {
 						System.out.println("Please enter a integer 1-4");
 						scan.nextLine();
@@ -1854,11 +2160,14 @@ public class Prog4 {
 					}
 				} while (loop);
 				
-				
+				// select between different queries
 				switch (input) {
 					//QUERY 1
 					case 1:
+
 						System.out.print("Enter a pet ID: ");
+						
+						// get int from input and call query
 						if (scan.hasNextInt()) {
 							input = scan.nextInt();
 							scan.nextLine();
@@ -1868,36 +2177,44 @@ public class Prog4 {
 							break;
 						}
 						break;
-					//QUERY 2 GOES HERE
+					//QUERY 2 
 					case 2:
 						System.out.print("Enter a customer ID: ");
+						
+						// get int from input and call query
 						if (scan.hasNextInt()) {
 							input = scan.nextInt();
 							scan.nextLine();
 							auditCustomer(input);	//call query
 						}
 						break;
-					//QUERY 3 GOES HERE
+					//QUERY 3 
 					case 3:
 						auditUpcomingEvents();	//call query
 						break;
-					// QUERY 4 GOES HERE
+						
+					// QUERY 4 
 					case 4:
+						
 						System.out.print("Enter a customer ID: ");
 						if (scan.hasNextInt()) {
 							input = scan.nextInt();
-							System.out.println(input);
 							scan.nextLine();
+							
+							// select option to search by
 							System.out.println("Select a record type:");
 							for (int i=0; i<recordType.length; i++) {
 								System.out.println("(" + (i + 1) + ") " + recordType[i]);
 							}
 							System.out.print("?: ");
+							
 							int type = scan.nextInt();
+							if (type < 1 || type > recordType.length) break;
+							
+							type--;	// convert to index
 							scan.nextLine();
 							auditAllHealthRecords(input, recordType[type]);	//call query
 						}
-						break;
 				}
 			}
 			// EXIT PROGRAM
