@@ -325,6 +325,7 @@ public class Prog4 {
 				
 				+ " LEFT JOIN dreynaldo.menu menu ON orditem.menuItemId = menu.menuItemId"
 				+ " WHERE res.custId = "+custID
+				+ " AND res.checkinStatus = 1"
 				 + " GROUP BY "
 				 + " res.reserveTime, "
 				 + " res.roomId,"
@@ -534,6 +535,8 @@ public class Prog4 {
 			pk = nextUniqueKey("reserveBooking","resId");	// find next primary key
 			overrides = new String[reservationPrompts.length];
 			overrides[0] = Integer.toString(pk);
+			overrides[5] = "'none'";	// set tier to none (haven't checked in yet)
+			
 			inputs = insertFields("reserveBooking", reservationPrompts, reservationTypes, overrides);
 			if (inputs == null) break;
 			
@@ -552,6 +555,7 @@ public class Prog4 {
 			pk = nextUniqueKey("adoptApplication","appID");	// find next primary key
 			overrides = new String[adoptPrompts.length];
 			overrides[0] = Integer.toString(pk);
+			overrides[4] = "'unreviewed'";
 			inputs = insertFields("adoptApplication", adoptPrompts, adoptTypes, overrides);
 			if (inputs == null) break;
 			
@@ -613,8 +617,26 @@ public class Prog4 {
 				updateEntity(tableName,pk,pkName, "email", types.t_string, scan,null);
 			}
 			else if (selectField == 3) {
-				System.out.println("Enter Tier: basic/plus/premium");
-				updateEntity(tableName,pk,pkName, "tier", types.t_string, scan,null);
+				System.out.println("Select Tier: basic(1)/plus(2)/premium(3)");
+				if (scan.hasNextInt()) {
+					selectField = scan.nextInt();
+					scan.nextLine();
+				}
+				else {
+					scan.nextLine();
+					break;
+				}
+				
+				if (selectField==2) {
+					updateEntity(tableName,pk,pkName, "tier", types.t_string, scan,"plus");
+				}
+				else if (selectField == 3) {
+					updateEntity(tableName,pk,pkName, "tier", types.t_string, scan,"premium");
+				}
+				else {
+					updateEntity(tableName,pk,pkName, "tier", types.t_string, scan,"basic");
+				}
+				
 			}
 			break;
 		case 2:
