@@ -354,7 +354,8 @@ public class Prog4 {
 	
 	public static void auditUpcomingEvents() {
 		String date = LocalDate.now().toString();
-		String query = "SELECT eventName, eventDate, eventStartTime, roomNo, eventCapacity, empID, eventID FROM dreynaldo.eventBooking  WHERE eventCapacity > (SELECT count(*) from dreynaldo.eventBooking where eventID=eventID) AND eventDate > date " + date;
+		String query = "SELECT eventName, eventDate, eventStartTime, roomNo, eventCapacity, empID, eventID FROM dreynaldo.event \"EVNT\" WHERE eventCapacity > (SELECT count(*) from dreynaldo.eventBooking \"BKING\" where \"EVNT\".eventID=\"BKING\".eventID) AND eventDate > SYSDATE"; // saw SYSDATE in one of Daniel's queries, hope it works.
+
 		Statement stmt = null;
 		
 		try { // replace this with code to process output
@@ -392,13 +393,14 @@ public class Prog4 {
 		}
 		
 		String date = LocalDate.now().toString();
-		String query = "SELECT petID, petName, recordID, empID, recordDate, recordType, description, nextDueDate, recordStatus FROM (select custID, petID, petName appStatus FROM dreynaldo.adoptApplication WHERE appStatus=1) JOIN dreynaldo.healthRecord on petID=petID WHERE recordType=" + type + " AND custID=" + Integer.toString(custID);
+		String query = "SELECT HR.petID, recordID, empID, recordDate, recordType, description, nextDueDate, recordStatus FROM (select custID, petID, appStatus FROM dreynaldo.adoptApplication WHERE appStatus='approved' and custID=" + custID + ") AA JOIN dreynaldo.healthRecord HR on HR.petID=AA.petID WHERE HR.recordType='" + type + "'";
 		Statement stmt = null;
-		
 		try { // replace this with code to process output
 			stmt = dbconn.createStatement();
-			stmt.execute(query);
+			ResultSet result = stmt.executeQuery(query);
 		
+			printResults(result);
+
 			stmt.close();	
 		} catch (SQLException e) {
 		        System.err.println("*** SQLException:  "
@@ -1455,6 +1457,7 @@ public class Prog4 {
 						System.out.print("Enter a customer ID: ");
 						if (scan.hasNextInt()) {
 							input = scan.nextInt();
+							System.out.println(input);
 							scan.nextLine();
 							String type = scan.nextLine();
 							auditAllHealthRecords(input, type);	//call query
