@@ -52,9 +52,9 @@ public class Prog4 {
 	
 	// For insertion on reservation
 	private static final String[] reservationPrompts = {"Reservation Id", "Customer Id", "Room Number", 
-			"Reservation Time", "Duration", "Checkin Status(0/1)", "Checkout Status(0/1)"};
-	private static final types[] reservationTypes = {types.t_int, types.t_int, types.t_int, types.t_time, types.t_float, types.t_int,
-			types.t_int};
+			"Reservation Time", "Duration", "Current Tier", "Checkin Status(0/1)", "Checkout Status(0/1)"};
+	private static final types[] reservationTypes = {types.t_int, types.t_int, types.t_int, types.t_time, types.t_float, 
+			types.t_string, types.t_int, types.t_int};
 	
 	
 	// For insertion on healthRecord
@@ -116,6 +116,48 @@ public class Prog4 {
 		}
         
         return nextPrimaryKey+1;
+        
+	}
+	
+	public static String currentReserveTier(int resId) {
+		// Send the query to the DBMS, and get and display the results
+        Statement stmt = null;
+        ResultSet answer = null;
+
+        try {
+        	
+        	// This gets the current tier of the customer who booked a reservation
+        	String query = "SELECT tier FROM "
+        			+ " dreynaldo.reserveBooking join dreynaldo.customer"
+        			+ " on dreynaldo.reserveBooking.custId = dreynaldo.customer.custId "
+        			+ " where resid = "+resId;
+
+        	// Execute and print result for first query
+            stmt = dbconn.createStatement();
+            answer = stmt.executeQuery(query);
+
+
+              
+        } catch (SQLException e) {
+
+            System.err.println("*** SQLException:  "
+                + "Could not fetch query results.");
+            System.err.println("\tMessage:   " + e.getMessage());
+            System.err.println("\tSQLState:  " + e.getSQLState());
+            System.err.println("\tErrorCode: " + e.getErrorCode());
+            return "";
+        }
+        
+        String tier = "";
+        try {
+        	answer.next();
+			tier = answer.getString(1);
+			stmt.close();
+		} catch (SQLException e) {
+			System.out.println("Error getting the next Primary Key");
+		}
+        
+        return tier;
         
 	}
 	
@@ -267,14 +309,37 @@ public class Prog4 {
 	}
 	
 	public static void auditCustomer(int custID) {
-		String query = "SELECT orderID, currentTier, roomNo, reservationDate, totalCost FROM ((SELECT roomNo, reservationDate, currentTier,checkInStatus, checkOutStatus FROM dreynaldo.reservationBooking WHERE checkInStatus=1 OR checkOutStatus=1) \"booking\"  JOIN dreynaldo.foodBooking ON custID=custID) JOIN room ON roomID=roomID where custID=" + Integer.toString(custID);
+		String query = "SELECT "
+				+ " reserveTime AS \"Reservation Time\","
+				+ " roomId AS \"Room Number\","
+				+ " ord.orderId AS \"Meal Order #\","
+				+ " SUM(orditem.qty) AS \"Qty Items Ordered\","
+				+ " SUM(orditem.qty*menu.price) AS \"Total Price\", "
+				+ " currentTier AS \"Tier At Time\" "
+				
+				+ " FROM dreynaldo.reserveBooking res LEFT JOIN dreynaldo.foodOrder ord"
+				+ " ON res.resId = ord.reservationId "
+				
+				+ " LEFT JOIN dreynaldo.orderItem orditem"
+				+ " ON orditem.orderID = ord.orderId"
+				
+				+ " LEFT JOIN dreynaldo.menu menu ON orditem.menuItemId = menu.menuItemId"
+				+ " WHERE res.custId = "+custID
+				 + " GROUP BY "
+				 + " res.reserveTime, "
+				 + " res.roomId,"
+				 + " ord.orderId,"
+				 + " res.currentTier" ;
+		
 		Statement stmt = null;
 		
 		try { // replace this with code to process output
 			stmt = dbconn.createStatement();
-			stmt.execute(query);
+			ResultSet result = stmt.executeQuery(query);
 		
-			stmt.close();	
+			printResults(result);
+			
+			stmt.close();
 		} catch (SQLException e) {
 		        System.err.println("*** SQLException:  "
 		            + "Could not fetch query results.");
@@ -331,7 +396,7 @@ public class Prog4 {
 		return;
 	}	
 	
-	private static String updateEntity(String tablename, int pk, String pkName, String fieldName, types fType, Scanner scan) {
+	private static String updateEntity(String tablename, int pk, String pkName, String fieldName, types fType, Scanner scan, String override) {
 
 		switch (fType) {
 			case t_int:
@@ -352,7 +417,14 @@ public class Prog4 {
 		}
 		System.out.print("?: ");
 		
-		String value = scan.nextLine().trim();
+		String value;
+		if (override == null) {
+			value = scan.nextLine().trim();
+		}
+		else {
+			value = override;
+		}
+		
 		String toReturn = value;
 		toReturn.replaceAll("'", "");	// remove quotes for return value
 		
@@ -499,6 +571,7 @@ public class Prog4 {
 		}
 	}
 	
+	
 	private static void selectModify(int input, Scanner scan) {
 		
 		String tableName;
@@ -534,14 +607,14 @@ public class Prog4 {
 			
 			// Update entity based on choice
 			if (selectField == 1) {
-				updateEntity(tableName,pk,pkName, "phone", types.t_string, scan);
+				updateEntity(tableName,pk,pkName, "phone", types.t_string, scan,null);
 			}
 			else if (selectField == 2) {
-				updateEntity(tableName,pk,pkName, "email", types.t_string, scan);
+				updateEntity(tableName,pk,pkName, "email", types.t_string, scan,null);
 			}
 			else if (selectField == 3) {
 				System.out.println("Enter Tier: basic/plus/premium");
-				updateEntity(tableName,pk,pkName, "tier", types.t_string, scan);
+				updateEntity(tableName,pk,pkName, "tier", types.t_string, scan,null);
 			}
 			break;
 		case 2:
@@ -561,13 +634,13 @@ public class Prog4 {
 			
 			// Update entity based on choice
 			if (selectField == 1) {
-				updateEntity(tableName,pk,pkName, "age", types.t_int, scan);
+				updateEntity(tableName,pk,pkName, "age", types.t_int, scan,null);
 			}
 			else if (selectField == 2) {
-				updateEntity(tableName,pk,pkName, "status", types.t_string, scan);
+				updateEntity(tableName,pk,pkName, "status", types.t_string, scan,null);
 			}
 			else if (selectField == 3) {
-				updateEntity(tableName,pk,pkName, "temperment", types.t_string, scan);
+				updateEntity(tableName,pk,pkName, "temperment", types.t_string, scan,null);
 			}
 			break;
 		case 3:
@@ -605,7 +678,7 @@ public class Prog4 {
 			}
 			else if (selectField == 2) {
 				System.out.println("Enter a status: 0/1");
-				updateEntity(tableName,pk,pkName, "paymentStatus", types.t_int, scan);
+				updateEntity(tableName,pk,pkName, "paymentStatus", types.t_int, scan,null);
 			}
 
 			break;
@@ -626,18 +699,22 @@ public class Prog4 {
 			
 			// Update entity based on choice
 			if (selectField == 1) {
-				updateEntity(tableName,pk,pkName, "reserveTime", types.t_time, scan);
+				updateEntity(tableName,pk,pkName, "reserveTime", types.t_time, scan,null);
 			}
 			else if (selectField == 2) {
-				updateEntity(tableName,pk,pkName, "duration", types.t_float, scan);
+				updateEntity(tableName,pk,pkName, "duration", types.t_float, scan,null);
 			}
 			else if (selectField == 3) {
 				System.out.println("Enter a status: 0/1");
-				updateEntity(tableName,pk,pkName, "checkinStatus", types.t_int, scan);
+				updateEntity(tableName,pk,pkName, "checkinStatus", types.t_int, scan,null);
+				
+				// Grab the current tier of customer, update the reservebookings current tier for customer history
+				String updateTier = currentReserveTier(pk);
+				updateEntity(tableName,pk,pkName, "currentTier", types.t_string, scan,updateTier);
 			}
 			else if (selectField == 4) {
 				System.out.println("Enter a status: 0/1");
-				updateEntity(tableName,pk,pkName, "checkinStatus", types.t_int, scan);
+				updateEntity(tableName,pk,pkName, "checkoutStatus", types.t_int, scan,null);
 			}
 			break;
 		case 5:
@@ -659,19 +736,19 @@ public class Prog4 {
 			String value;
 			// Update entity based on choice
 			if (selectField == 1) {
-				value = updateEntity(tableName,pk,pkName, "recordType", types.t_string, scan);
+				value = updateEntity(tableName,pk,pkName, "recordType", types.t_string, scan,null);
 				changed = "Record Type";
 			}
 			else if (selectField == 2) {
-				value = updateEntity(tableName,pk,pkName, "description", types.t_string, scan);
+				value = updateEntity(tableName,pk,pkName, "description", types.t_string, scan,null);
 				changed = "Description";
 			}
 			else if (selectField == 3) {
-				value = updateEntity(tableName,pk,pkName, "nextDueDate", types.t_date, scan);
+				value = updateEntity(tableName,pk,pkName, "nextDueDate", types.t_date, scan,null);
 				changed = "Next Due Date";
 			}
 			else if (selectField == 4) {
-				value = updateEntity(tableName,pk,pkName, "recordStatus", types.t_string, scan);
+				value = updateEntity(tableName,pk,pkName, "recordStatus", types.t_string, scan,null);
 				changed = "Status";
 			}
 			else {
@@ -689,7 +766,7 @@ public class Prog4 {
 			pkName = "appID";
 
 			System.out.println("Enter a new status for the application(pending/approved/rejected/withdrawn):");
-			updateEntity(tableName,pk,pkName, "appStatus", types.t_string, scan);
+			updateEntity(tableName,pk,pkName, "appStatus", types.t_string, scan,null);
 			
 			break;
 		case 7:
@@ -710,10 +787,10 @@ public class Prog4 {
 			System.out.println("Enter a status: 0/1");
 			// Update entity based on choice
 			if (selectField == 1) {
-				updateEntity(tableName,pk,pkName, "attendanceStatus", types.t_int, scan);
+				updateEntity(tableName,pk,pkName, "attendanceStatus", types.t_int, scan,null);
 			}
 			else if (selectField == 2) {
-				updateEntity(tableName,pk,pkName, "paymentStatus", types.t_int, scan);
+				updateEntity(tableName,pk,pkName, "paymentStatus", types.t_int, scan,null);
 			}
 
 			break;
@@ -1314,7 +1391,7 @@ public class Prog4 {
 				switch (input) {
 					//QUERY 1
 					case 1:
-						System.out.print("Enter a petID: ");
+						System.out.print("Enter a pet ID: ");
 						if (scan.hasNextInt()) {
 							input = scan.nextInt();
 							scan.nextLine();
@@ -1326,6 +1403,12 @@ public class Prog4 {
 						break;
 					//QUERY 2 GOES HERE
 					case 2:
+						System.out.print("Enter a customer ID: ");
+						if (scan.hasNextInt()) {
+							input = scan.nextInt();
+							scan.nextLine();
+							auditCustomer(input);	//call query
+						}
 						break;
 					//QUERY 3 GOES HERE
 					case 3:
